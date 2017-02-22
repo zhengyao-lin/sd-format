@@ -13,27 +13,12 @@ def serial2num(serial):
 	b = [ ord(c) for c in serial ]
 	return b[3] << 24 | b[2] << 16 | b[1] << 8 | b[0]
 
-def keygen01(ref, serial):
-	return md5(keymap[ref % 64] + serial + str(ref), 6)
-
-def keygen02(uid, serial): # serial: a byte string
+def keygen(uid, serial): # serial: a byte string
 	return md5(str(uid) + serial + keymap[serial2num(serial) % 64], 6)
 
 class SDFormat:
 	def __init__(self, port):
 		self.device = YHY523U(port)
-
-	def initCard01(self, uid = 1, value = 0, version = 1): # all required blocks must has a key of "\xff" * 6
-		card_type, serial = self.device.select()
-
-		self.device.write_block(1, DEF_KEY, 0, struct.pack("<IIII", 0, timestamp(), 0, 0))
-		self.device.write_block(2, DEF_KEY, 0, struct.pack("<IIII", uid, value, version, 0))
-		self.device.write_block(2, DEF_KEY, 1, "\x00" * 16)
-
-		key = keygen01(0, serial)
-		self.device.set_key(2, DEF_KEY, key, key)
-
-		print(to_hex(key))
 
 	def initCard02(self, uid = 1, value = 0, version = 1):
 		card_type, serial = self.device.select()
@@ -110,6 +95,8 @@ class SDFormat:
 # print to_hex(keygen(123, "123"))
 
 sd = SDFormat("/dev/ttyUSB0")
+
+print to_hex(keygen(4, "\x3a\xf1\x6c\xee"))
 
 # 2f6b6fff5c35
 # 8d 0b e2 9e 45 3a

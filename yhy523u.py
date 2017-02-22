@@ -188,11 +188,11 @@ class YHY523U:
 		"""
 		status, card_type = self.send_receive(CMD_MIFARE_REQUEST, "\x52")
 		if status != 0:
-			raise Exception, "No card found"
+			raise Exception, "no card found"
 
 		status, serial = self.send_receive(CMD_MIFARE_ANTICOLISION, "\x04")
 		if status != 0:
-			raise Exception, "Error in anticollision"
+			raise Exception, "error in anticollision"
 
 		card_type = struct.unpack(">H", card_type)[0]
 		if card_type == TYPE_MIFARE_UL:
@@ -223,7 +223,7 @@ class YHY523U:
 		for block in blocks:
 			status, data = self.send_receive(CMD_MIFARE_READ_BLOCK, chr(sector * 4 + block))
 			if status != 0:
-				raise Exception, "errorcode: %d" % status
+				raise Exception, "errno: %d" % status
 			results += data
 
 		return results
@@ -233,7 +233,7 @@ class YHY523U:
 		
 		status, data = self.send_receive(CMD_MIFARE_READ_BLOCK, chr(sector * 4 + block))
 		if status != 0:
-			raise Exception, "errorcode: %d" % status
+			raise Exception, "errno: %d" % status
 
 		return data
 
@@ -261,7 +261,7 @@ class YHY523U:
 		
 		status, result = self.send_receive(CMD_MIFARE_WRITE_BLOCK, chr(sector * 4 + block) + data)
 		if status != 0:
-			raise Exception, "errorcode: %d" % status
+			raise Exception, "errno: %d" % status
 
 		return result
 
@@ -272,7 +272,7 @@ class YHY523U:
 
 		status, result = self.send_receive(CMD_MIFARE_WRITE_BLOCK, chr(sector * 4 + 3) + data)
 		if status != 0:
-			raise Exception, "errorcode: %d" % status
+			raise Exception, "errno: %d" % status
 
 		return result
 
@@ -350,9 +350,9 @@ class YHY523U:
 		led -- the LED to be lighted, can be: "red", "blue", "both" or "off" (default: "off")
 
 		"""
-		if led == "red":
+		if led == "blue":
 			data = "\x01"
-		elif led == "blue":
+		elif led == "red":
 			data = "\x02"
 		elif led == "both":
 			data = "\x03"
@@ -396,7 +396,7 @@ class YHY523U:
 		self.send_receive(CMD_MIFARE_AUTH2, "\x60" + chr(sector * 4) + keya)
 		status, result = self.send_receive(CMD_MIFARE_INITVAL, chr(sector * 4 + block) + struct.pack("I", amount))
 		if status != 0:
-			raise Exception, "errorcode: %d" % status
+			raise Exception, "errno: %d" % status
 		return result
 		
 	def read_balance(self, sector = 0, keya = "\xff" * 6, block = 0):
@@ -411,7 +411,7 @@ class YHY523U:
 		self.send_receive(CMD_MIFARE_AUTH2, "\x60" + chr(sector * 4) + keya)
 		status, result = self.send_receive(CMD_MIFARE_READ_BALANCE, chr(sector * 4 + block))
 		if status != 0:
-			raise Exception, "errorcode: %d" % status
+			raise Exception, "errno: %d" % status
 		return result
 		
 	def decrease_balance(self, sector = 0, keya = "\xff" * 6, block = 0, amount = 1):
@@ -427,7 +427,7 @@ class YHY523U:
 		self.send_receive(CMD_MIFARE_AUTH2, "\x60" + chr(sector * 4) + keya)
 		status, result = self.send_receive(CMD_MIFARE_DECREMENT, chr(sector * 4 + block) + struct.pack("I", amount))
 		if status != 0:
-			raise Exception, "errorcode: %d" % status
+			raise Exception, "errno: %d" % status
 		return result
 		
 	def increase_balance(self, sector = 0, keya = "\xff" * 6, block = 0, amount = 1):
@@ -443,7 +443,7 @@ class YHY523U:
 		self.send_receive(CMD_MIFARE_AUTH2, "\x60" + chr(sector * 4) + keya)
 		status, result = self.send_receive(CMD_MIFARE_INCREMENT, chr(sector * 4 + block) + struct.pack("I", amount))
 		if status != 0:
-			raise Exception, "errorcode: %d" % status
+			raise Exception, "errno: %d" % status
 		return result
 
 	def test_keys(self, sector = 0, keys = DEFAULT_KEYS):
@@ -516,7 +516,16 @@ if __name__ == "__main__":
 	device = YHY523U("/dev/ttyUSB0", 115200)
 	last_serial = None
 
-	# device.select()
+	device.select()
+
+	# "\x35\x12\x44\x5c\xdd\xc6"
+	# "\x1b\x6f\x74\xc0\x8b\x2d"
+	# "\xde\xce\x8c\x29\x2d\xef"
+	# "\x8d\x0b\xe2\x9e\x45\x3a"
+	# "\x8d\x9f\xf6\x1a\x35\xe2"
+	device.set_key(3, "\x8d\x9f\xf6\x1a\x35\xe2", "\xff" * 6, "\xff" * 6)
+	# device.write_block(3, "\xff" * 6, 0, "\x00" * 16)
+	# device.write_block(2, "\xff" * 6, 0, "\x00" * 16)
 
 	# device.init_balance(1, "\xff" * 6, 0, 10)
 	# device.increase_balance(1, "\xff" * 6, 0, 2)
