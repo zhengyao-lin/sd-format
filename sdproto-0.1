@@ -1,0 +1,30 @@
+
+Star Dollar Format 0.1
+
+Note:
+	1. All integers are encoded in little endian
+	2. Memory format based on Mifare 1K card
+
+Sector 1:
+	Block 0:
+		struct {
+			uint32 ref; // use count
+			uint32 stamp; // timestamp
+		}
+
+Sector 2: keyA = keyB = md5(keymap[ref % 64] + serial number + str(ref))[:6]
+	Block 0:
+		struct {
+			uint32 uid;
+			uint32 value; // can only be 0, 20, 50, 100
+			uint32 vers; // version
+			uint32 pad; // padding, fill in 0
+		}
+
+	Block 1:
+		struct {
+			uint32 kh; // key high
+			uint32 kl; // key low
+			uint32 pad1; // fill in 0
+			uint32 pad2; // fill in 0
+		}
