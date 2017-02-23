@@ -47,6 +47,7 @@ class SDEngine:
 			# get offset
 			ofs = STRUCT_BLOCK.unpack(self.device.read_block(1, DEF_KEY, 0))[0]
 			assert ofs <= DEF_MAXOFS
+			ofs *= 8
 
 			b20 = list(STRUCT_BLOCK.unpack(self.device.read_block(ofs + 2, DEF_KEY, 0)))
 
@@ -128,6 +129,7 @@ class SDEngine:
 
 		ofs = STRUCT_BLOCK.unpack(self.device.read_block(1, DEF_KEY, 0))[0]
 		assert ofs <= DEF_MAXOFS
+		ofs *= 8
 
 		self.device.write_block(1, DEF_KEY, 0, "\x00" * 16)
 

@@ -523,7 +523,7 @@ if __name__ == "__main__":
 	# "\xde\xce\x8c\x29\x2d\xef"
 	# "\x8d\x0b\xe2\x9e\x45\x3a"
 	# "\x8d\x9f\xf6\x1a\x35\xe2"
-	device.set_key(3, "\x8d\x9f\xf6\x1a\x35\xe2", "\xff" * 6, "\xff" * 6)
+	# device.set_key(3, "\x8d\x9f\xf6\x1a\x35\xe2", "\xff" * 6, "\xff" * 6)
 	# device.write_block(3, "\xff" * 6, 0, "\x00" * 16)
 	# device.write_block(2, "\xff" * 6, 0, "\x00" * 16)
 
