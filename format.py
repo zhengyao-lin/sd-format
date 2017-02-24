@@ -1,12 +1,14 @@
 import struct, time
 import argparse
 import auth
+import math
 
 from util import *
 from yhy523u import *
 
 DEF_KEY = "\xff" * 6
-DEF_MAXOFS = 7
+DEF_DATASIZE = 8 # sectors
+DEF_MAXOFS = int((64 - 1) / DEF_DATASIZE)
 
 ALLOW_VALUE = (1, 2, 5)
 STRUCT_BLOCK = struct.Struct("<IIII")
@@ -18,7 +20,8 @@ class SDEngine:
 	def initCard(self, uid, value, version = 1, ofs = 0):
 		card_type, serial = self.device.select()
 
-		assert ofs <= 7
+		assert ofs <= DEF_MAXOFS
+		ofs *= DEF_DATASIZE
 
 		self.device.write_block(1, DEF_KEY, 0, STRUCT_BLOCK.pack(ofs, 0, 0, 0))
 
@@ -47,7 +50,7 @@ class SDEngine:
 			# get offset
 			ofs = STRUCT_BLOCK.unpack(self.device.read_block(1, DEF_KEY, 0))[0]
 			assert ofs <= DEF_MAXOFS
-			ofs *= 8
+			ofs *= DEF_DATASIZE
 
 			b20 = list(STRUCT_BLOCK.unpack(self.device.read_block(ofs + 2, DEF_KEY, 0)))
 
@@ -129,7 +132,7 @@ class SDEngine:
 
 		ofs = STRUCT_BLOCK.unpack(self.device.read_block(1, DEF_KEY, 0))[0]
 		assert ofs <= DEF_MAXOFS
-		ofs *= 8
+		ofs *= DEF_DATASIZE
 
 		self.device.write_block(1, DEF_KEY, 0, "\x00" * 16)
 
