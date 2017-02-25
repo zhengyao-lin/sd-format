@@ -543,7 +543,7 @@ if __name__ == "__main__":
 			device.dump()
 			# device.dump_access_conditions()
 
-			# print to_hex(device.read_sector(1, "\xff" * 6))
+			# print to_hex(device.read_sector(4, "\xe8\x0b\x65\xd4\xca"))
 			# print to_hex(device.read_sector(2, "\x2f\x6b\x6f\xff\x5c\x35"))
 
 			# device.write_block(13, "\xee" * 6, 0, "\x00" * 16)

@@ -90,6 +90,8 @@ ENV/
 
 res/
 km*
+sdenc.pub
+sdenc.priv
 
 # update scripts
 upload.sh
