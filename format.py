@@ -1,12 +1,12 @@
+#! /usr/bin/env python3
+
 import struct, time
 import argparse
-import platform
 import getpass
 import base64
 import auth
 import math
 import os
-import re
 
 import serial.tools.list_ports
 
@@ -438,8 +438,13 @@ if __name__ == "__main__":
 		comlist = list(serial.tools.list_ports.comports())
 
 		for com in comlist:
-			if re.match(r"CP210|cp210", com.description):
+			# print(com.description)
+			if com.description.find("cp210") != -1 or \
+			   com.description.find("CP210") != -1:
 				port = com.device
+
+	if not port:
+		errmsg("cannot find any device, please specify one com")
 
 	print("use device at " + port)
 

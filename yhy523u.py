@@ -1,6 +1,5 @@
-#!/usr/bin/python
+#! /usr/bin/env python3
 
-import datetime
 import os, sys, struct, serial
 from functools import reduce
 
