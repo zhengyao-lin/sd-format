@@ -1,5 +1,7 @@
 import struct, time
 import argparse
+import getpass
+import base64
 import auth
 import math
 import os
@@ -10,6 +12,7 @@ from yhy523u import *
 DEF_KEY = "\xff" * 6
 DEF_DATASIZE = 8 # sectors
 DEF_MAXOFS = int((64 - 1) / DEF_DATASIZE)
+DEF_MAXKEYBLOCK = 13
 
 ALLOW_VALUE = (1, 2, 5)
 STRUCT_BLOCK = struct.Struct("<IIII")
@@ -143,6 +146,12 @@ class SDEngine:
 			"msg": msg
 		}
 
+	def waitCard(self):
+		while not self.hasCard(): time.sleep(0.1)
+
+	def waitCardLeave(self):
+		while self.hasCard(): time.sleep(0.1)
+
 	def validLoop(self, debug):
 		res = None
 
@@ -163,7 +172,7 @@ class SDEngine:
 			else:
 				self.beep("failed")
 
-			while self.hasCard(): pass
+			self.waitCardLeave()
 
 		return res
 
@@ -180,11 +189,11 @@ class SDEngine:
 				self.beep("suc")
 			except KeyboardInterrupt:
 				raise KeyboardInterrupt
-			except:
-				print("failed")
+			except Exception, e:
+				print("failed: " + e.message)
 				self.beep("failed")
 
-			while self.hasCard(): pass
+			self.waitCardLeave()
 		
 		return key
 
@@ -256,6 +265,109 @@ class SDEngine:
 			raise KeyboardInterrupt
 		except: pass
 
+	# card type(ctp): 1 for pub key, 2 for priv key
+	def initAdminCard(self, ctp, b64key, passwd):
+		card_type, serial = self.device.select()
+		key = base64.b64decode(b64key)
+		
+		assert len(key) <= DEF_MAXKEYBLOCK * 3 * 16
+
+		self.device.write_block(1, DEF_KEY, 0, STRUCT_BLOCK.pack(ctp, len(key), 0, 0)) # type, len
+
+		if len(key) % 16:
+			key += "\x00" * (16 - len(key) % 16)
+
+		sec = 2 # sector
+		block = 0
+
+		for i in range(0, len(key), 16):
+			if block == 2:
+				sec += 1
+				block = 0
+			else:
+				block += 1
+
+			self.device.write_block(sec, DEF_KEY, block, key[i:i + 16])
+
+		passwd = md5(passwd, 6)
+
+		for i in range(1, 16):
+			self.device.set_key(i, DEF_KEY, passwd, passwd)
+
+	def readAdminCard(self, passwd):
+		ctp = None
+		klen = None
+		key = None
+		msg = None
+		suc = 0
+
+		try:
+			card_type, serial = self.device.select()
+
+			passwd = md5(passwd, 6)
+
+			b10 = STRUCT_BLOCK.unpack(self.device.read_block(1, passwd, 0))
+
+			ctp = b10[0]
+			klen = b10[1]
+
+			if klen % 16:
+				klen += 16 - klen % 16
+
+			sec = 2 # sector
+			block = 0
+			key = ""
+
+			for i in range(0, klen, 16):
+				if block == 2:
+					sec += 1
+					block = 0
+				else:
+					block += 1
+
+				key += self.device.read_block(sec, passwd, block)
+
+			klen = b10[1]
+			key = key[:klen]
+			suc = 1
+
+		except KeyboardInterrupt:
+			raise KeyboardInterrupt
+		except Exception, e:
+			msg = e.message
+
+		return {
+			"suc": suc,
+			"type": ctp,
+			"key": key,
+			"msg": msg
+		}
+
+	def applyAdminCard(self, ctp, key):
+		if ctp == 1:
+			# pub key
+			pkcs = "-----BEGIN RSA PUBLIC KEY-----\n" + base64.b64encode(key) + "\n-----END RSA PUBLIC KEY-----"
+			self.enc.loadPubKey(pkcs)
+			return "public"
+		elif ctp == 2:
+			# priv key
+			pkcs = "-----BEGIN RSA PRIVATE KEY-----\n" + base64.b64encode(key) + "\n-----END RSA PRIVATE KEY-----"
+			self.enc.loadPrivKey(pkcs)
+			return "private"
+		else:
+			raise Exception, "unrecognized admin card type " + str(ctp)
+
+	def wipeAdmin(self, passwd):
+		card_type, serial = self.device.select()
+
+		passwd = md5(passwd, 6)
+
+		for i in range(1, 16):
+			self.device.write_block(i, passwd, 0, "\x00" * 16)
+			self.device.write_block(i, passwd, 1, "\x00" * 16)
+			self.device.write_block(i, passwd, 2, "\x00" * 16)
+			self.device.set_key(i, passwd, DEF_KEY, DEF_KEY)
+
 def errmsg(msg, code = 1):
 	print("error: " + msg)
 	exit(code)
@@ -275,6 +387,11 @@ if __name__ == "__main__":
 	parser.add_argument("--pub", help = "public key", type = str, default = "sdenc.pub")
 	parser.add_argument("--priv", help = "private key", type = str, default = "sdenc.priv")
 
+	parser.add_argument("--admin", help = "load an admin card", action = "store_true")
+	parser.add_argument("--write-pub", help = "initialize an admin card with public key", action = "store_true")
+	parser.add_argument("--write-priv", help = "initialize an admin card with private key", action = "store_true")
+	parser.add_argument("--wipe-admin", help = "wipe out an admin card", action = "store_true")
+
 	argv = parser.parse_args()
 
 	pub = None
@@ -291,7 +408,73 @@ if __name__ == "__main__":
 	if argv.mute:
 		eng.mute()
 
+	if argv.admin:
+		# eng.initAdminCard(2, "MIICYAIBAAKBgQCTCKuIZuVzMaZebKIC7eVacqElXFEDiPe8Xjt3KnF2wocutJJLImYx0dUwiZeSAJAp/fL3z49LNkQ1N/vpNml9B7pVeiYow+Lv8V2RV06CD9N6M5mJ4qNYg4uqLRU41RajQcGs9Pu4J/SnMxoacRlhB1Komp56HjoaVPlxzTN/tQIDAQABAoGAPjjPDlwtAYCjXRYvwXmXM52K4Fqe1hYicI6YL6fAeHd96Z/0wOL/yFl6FJ5FjD28xGh5Z7FofHWsi7DzHtwf1Wn8h2Fr3u8I1YZ8xqTP/NAXxQ958eFMKcG8jeASbOizIbrnOxbhw4PQ5hZLmjf1yUUSE/v/45FQPf3l6/MjngECRQCjh2T895yixUxPewxajoGxsYK943nkLMv2lYlP94Q+mhJBVmXtfdvaDHre3Jxfkvl/ANCsO4uJplNdq+qYU5BCH5HOdQI9AOYtcLdhDiNc7a15oGjTArIE2AocNX+8GIT6raLvH58/RhfbXaeIvsaRU3KeuiKRQ8BJpYq4DuzaKBtEQQJEOWeoHd1WURVtimEpnwhzossrmDkoat8G4pLv1vCOreMsEV+g/FO4P70tzNoo0qwnhVvl5PAqNbH7heB5w+thsrSeXJkCPFHHCyjbvp4pwffEIo2binWc6vSMmSVMuplkRpSAyIdXf5uyQE/pcX4y26b5ZcAqRBvpDnt+cS8NQvqNAQJFAIk2IW7j7MHdzRVmhj2KvO+14v744GpHaRTMHC2Tw8fIuvJKpcCWeW44sSctslljFpWIJ8VY/eDu4wfYrKMRWrHeoW97", "116879")
+		print("waiting for admin card")
+		eng.waitCard()
+
+		passwd = getpass.getpass("password: ")
+		ret = eng.readAdminCard(passwd)
+
+		if not ret["suc"]:
+			errmsg("failed to load admin card: " + ret["msg"])
+
+		ctp = eng.applyAdminCard(ret["type"], ret["key"])
+		print("a %s key is loaded" % ctp)
+
+		eng.waitCardLeave()
+
+	elif argv.write_pub:
+		if not pub:
+			errmsg("no public key found")
+		with open(pub) as fp:
+			print("waiting for empty card")
+			eng.waitCard()
+			
+			key = "".join(fp.read().strip("\r\n").split("\n")[1:-1])
+			# print(key)
+
+			passwd = getpass.getpass("set password: ")
+			repeat = getpass.getpass("repeat: ")
+			if passwd != repeat:
+				errmsg("different passwords")
+
+			eng.initAdminCard(1, key, passwd)
+			print("success")
+
+		exit(0)
+
+	elif argv.write_priv:
+		if not priv:
+			errmsg("no private key found")
+		with open(priv) as fp:
+			print("waiting for empty card")
+			eng.waitCard()
+
+			key = "".join(fp.read().strip("\r\n").split("\n")[1:-1])
+
+			passwd = getpass.getpass("set password: ")
+			repeat = getpass.getpass("repeat: ")
+			if passwd != repeat:
+				errmsg("different passwords")
+
+			eng.initAdminCard(2, key, passwd)
+			print("success")
+
+		exit(0)
+
+	elif argv.wipe_admin:
+		print("waiting for admin card")
+		eng.waitCard()
+		if raw_input("Are you sure to wipe out the admin card? [N/y]: ").lower() == "y":
+			passwd = getpass.getpass("password: ")
+			eng.wipeAdmin(passwd)
+			print("success")
+		exit(0)
+
 	if argv.wipe:
+		print("waiting for card")
+		eng.waitCard()
 		if raw_input("Are you sure to wipe out the card? [N/y]: ").lower() == "y":
 			eng.wipeout()
 			print("success")

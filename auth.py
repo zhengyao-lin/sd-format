@@ -38,6 +38,12 @@ class SDEnc:
 		with open(path) as fp:
 			self.priv = rsa.PrivateKey.load_pkcs1(fp.read())
 
+	def loadPubKey(self, key):
+		self.pub = rsa.PublicKey.load_pkcs1(key)
+
+	def loadPrivKey(self, key):
+		self.priv = rsa.PrivateKey.load_pkcs1(key)
+
 	def sign(self, uid, ofs, serial, value):
 		if self.priv == None:
 			raise Exception, "require a private key"
