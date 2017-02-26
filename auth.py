@@ -3,22 +3,22 @@ import struct
 from util import *
 
 keymap = [
-	"e787a360289446eb", "7a592de8cc39020e", "b86dc740a760f2e5", "9ee4b1a1b364050e",
-	"f44ad3f218438afd", "98bbac6b89060f71", "58d3be3ea90ab87d", "cece3a46e37be125",
-	"8051bac2235ece40", "0f566aaff18d7976", "7dfb35abf0d94c83", "b5b8ef687f79a49f",
-	"69e2e0b5a96929f8", "9442c17251ed112b", "97da9ef5f9c1e450", "9aba4145d2a222ca",
-	"53ccd3cffe2ae2ff", "bab69b76720b0237", "98c8c2e3b75bfadf", "b9bf056b3c10008d",
-	"def9aff3699f18b9", "b107aa5ee856a574", "d6fe7a9010439b39", "d24f273d35cdef8b",
-	"7232a820fb85f0b5", "92aa2e1165d0d93d", "7fcf62bf5c86de43", "bbee2e7504ca13ec",
-	"36bd8afd3141a5f3", "f4d0eba594ef5f92", "fc8a914e3426eb13", "0e0f176c611bec35",
-	"80cc3a2a52795143", "0486ec528ca679e5", "f760eb19c5163834", "7991373e04a0728f",
-	"4fb0dcfcdb421bf9", "a648b39b7638b029", "822d04c3b62278d2", "e59f4feefdbe847f",
-	"a768264c18296a97", "162ff5f1867ad99e", "c0afafcd7ed7597d", "38fd53363158a7d1",
-	"8e8eadb05a1cc4da", "32a6f0acedf3b6ec", "99f0d09a65ecfeb9", "6e242eecc41a562b",
-	"070c4cf0972c7539", "7f7a06edd40bda6d", "ffe24ebf336186a4", "3ee43a47048bb37f",
-	"1006dbe0fc243885", "04465c675c819b04", "e32a5f16e37417f4", "18c5b2a0d920ff45",
-	"3a1e62d6e3094411", "6f604c09dc3d7ef1", "ca39a1adf440adc6", "5ab777b8d9a7896c",
-	"3891cfe06673bf09", "952d98845ac97bc0", "226dd8f7b26c6db6", "dfb862b6a635ccb2"
+	b"e787a360289446eb", b"7a592de8cc39020e", b"b86dc740a760f2e5", b"9ee4b1a1b364050e",
+	b"f44ad3f218438afd", b"98bbac6b89060f71", b"58d3be3ea90ab87d", b"cece3a46e37be125",
+	b"8051bac2235ece40", b"0f566aaff18d7976", b"7dfb35abf0d94c83", b"b5b8ef687f79a49f",
+	b"69e2e0b5a96929f8", b"9442c17251ed112b", b"97da9ef5f9c1e450", b"9aba4145d2a222ca",
+	b"53ccd3cffe2ae2ff", b"bab69b76720b0237", b"98c8c2e3b75bfadf", b"b9bf056b3c10008d",
+	b"def9aff3699f18b9", b"b107aa5ee856a574", b"d6fe7a9010439b39", b"d24f273d35cdef8b",
+	b"7232a820fb85f0b5", b"92aa2e1165d0d93d", b"7fcf62bf5c86de43", b"bbee2e7504ca13ec",
+	b"36bd8afd3141a5f3", b"f4d0eba594ef5f92", b"fc8a914e3426eb13", b"0e0f176c611bec35",
+	b"80cc3a2a52795143", b"0486ec528ca679e5", b"f760eb19c5163834", b"7991373e04a0728f",
+	b"4fb0dcfcdb421bf9", b"a648b39b7638b029", b"822d04c3b62278d2", b"e59f4feefdbe847f",
+	b"a768264c18296a97", b"162ff5f1867ad99e", b"c0afafcd7ed7597d", b"38fd53363158a7d1",
+	b"8e8eadb05a1cc4da", b"32a6f0acedf3b6ec", b"99f0d09a65ecfeb9", b"6e242eecc41a562b",
+	b"070c4cf0972c7539", b"7f7a06edd40bda6d", b"ffe24ebf336186a4", b"3ee43a47048bb37f",
+	b"1006dbe0fc243885", b"04465c675c819b04", b"e32a5f16e37417f4", b"18c5b2a0d920ff45",
+	b"3a1e62d6e3094411", b"6f604c09dc3d7ef1", b"ca39a1adf440adc6", b"5ab777b8d9a7896c",
+	b"3891cfe06673bf09", b"952d98845ac97bc0", b"226dd8f7b26c6db6", b"dfb862b6a635ccb2"
 ]
 
 def pack(uid, ofs, serial, value = 0):
@@ -85,9 +85,9 @@ enc = SDEnc()
 
 enc.loadPriv("sdenc.priv")
 enc.loadPub("sdenc.pub")
-sign = enc.sign(1, 0, "\xff\xee\xff\xee", 5)
+sign = enc.sign(1, 0, b"\xff\xee\xff\xee", 5)
 
 print(to_hex(sign))
 
-print(enc.verify(sign, 1, 0, "\xff\xee\xff\xee", 2))
+print(enc.verify(sign, 1, 0, b"\xff\xee\xff\xee", 2))
 """

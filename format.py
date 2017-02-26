@@ -13,8 +13,8 @@ import serial.tools.list_ports
 from util import *
 from yhy523u import *
 
-DEF_SDHEAD = "star"
-DEF_KEY = "\xff" * 6
+DEF_SDHEAD = b"star"
+DEF_KEY = b"\xff" * 6
 DEF_DATASIZE = 8 # sectors
 DEF_MAXOFS = int((64 - 1) / DEF_DATASIZE)
 DEF_MAXKEYBLOCK = 13
@@ -148,7 +148,7 @@ class SDEngine:
 		except KeyboardInterrupt:
 			raise KeyboardInterrupt()
 		except Exception as e:
-			msg = e.message
+			msg = str(e)
 
 		return {
 			"suc": suc,
@@ -204,7 +204,7 @@ class SDEngine:
 			except KeyboardInterrupt:
 				raise KeyboardInterrupt()
 			except Exception as e:
-				print("failed: " + e.message)
+				print("failed: " + str(e))
 				self.beep("failed")
 
 			self.waitCardLeave()
@@ -218,29 +218,29 @@ class SDEngine:
 		assert ofs <= DEF_MAXOFS
 		ofs *= DEF_DATASIZE
 
-		self.device.write_block(1, DEF_KEY, 0, "\x00" * 16)
+		self.device.write_block(1, DEF_KEY, 0, b"\x00" * 16)
 
 		b20 = STRUCT_BLOCK.unpack(self.device.read_block(ofs + 2, DEF_KEY, 0))
 
-		self.device.write_block(ofs + 2, DEF_KEY, 0, "\x00" * 16) # uid, ref, pad, pad
-		self.device.write_block(ofs + 2, DEF_KEY, 1, "\x00" * 16) # key[4]
+		self.device.write_block(ofs + 2, DEF_KEY, 0, b"\x00" * 16) # uid, ref, pad, pad
+		self.device.write_block(ofs + 2, DEF_KEY, 1, b"\x00" * 16) # key[4]
 
 		key = auth.keygen(b20[0], ofs, serial)
 
 		self.device.set_key(ofs + 3, key, DEF_KEY, DEF_KEY)
-		self.device.write_block(ofs + 3, DEF_KEY, 0, "\x00" * 16)
-		self.device.write_block(ofs + 3, DEF_KEY, 1, "\x00" * 16)
-		self.device.write_block(ofs + 3, DEF_KEY, 2, "\x00" * 16)
+		self.device.write_block(ofs + 3, DEF_KEY, 0, b"\x00" * 16)
+		self.device.write_block(ofs + 3, DEF_KEY, 1, b"\x00" * 16)
+		self.device.write_block(ofs + 3, DEF_KEY, 2, b"\x00" * 16)
 
 		self.device.set_key(ofs + 4, key, DEF_KEY, DEF_KEY)
-		self.device.write_block(ofs + 4, DEF_KEY, 0, "\x00" * 16)
-		self.device.write_block(ofs + 4, DEF_KEY, 1, "\x00" * 16)
-		self.device.write_block(ofs + 4, DEF_KEY, 2, "\x00" * 16)
+		self.device.write_block(ofs + 4, DEF_KEY, 0, b"\x00" * 16)
+		self.device.write_block(ofs + 4, DEF_KEY, 1, b"\x00" * 16)
+		self.device.write_block(ofs + 4, DEF_KEY, 2, b"\x00" * 16)
 
 		self.device.set_key(ofs + 5, key, DEF_KEY, DEF_KEY)
-		self.device.write_block(ofs + 5, DEF_KEY, 0, "\x00" * 16)
-		self.device.write_block(ofs + 5, DEF_KEY, 1, "\x00" * 16)
-		self.device.write_block(ofs + 5, DEF_KEY, 2, "\x00" * 16)
+		self.device.write_block(ofs + 5, DEF_KEY, 0, b"\x00" * 16)
+		self.device.write_block(ofs + 5, DEF_KEY, 1, b"\x00" * 16)
+		self.device.write_block(ofs + 5, DEF_KEY, 2, b"\x00" * 16)
 
 	def hasCard(self):
 		return self.device.has_card()
@@ -283,13 +283,17 @@ class SDEngine:
 	def initAdminCard(self, ctp, b64key, passwd):
 		card_type, serial = self.device.select()
 		key = base64.b64decode(b64key)
-		
+	
+		# print(to_hex(key))
+
 		assert len(key) <= DEF_MAXKEYBLOCK * 3 * 16
 
 		self.device.write_block(1, DEF_KEY, 0, STRUCT_BLOCK.pack(ctp, len(key), 0, 0)) # type, len
 
+		# print(len(key))
+
 		if len(key) % 16:
-			key += "\x00" * (16 - len(key) % 16)
+			key += b"\x00" * (16 - len(key) % 16)
 
 		sec = 2 # sector
 		block = 0
@@ -303,7 +307,11 @@ class SDEngine:
 
 			self.device.write_block(sec, DEF_KEY, block, key[i:i + 16])
 
-		passwd = md5(passwd, 6)
+			dat = self.device.read_block(sec, DEF_KEY, block)
+			# print(to_hex(key[i:i + 16]))
+			# print(b"r: " + bytec(to_hex(dat)) + b", " + bytec(str(dat == key[i:i + 16])))
+
+		passwd = md5(bytec(passwd), 6)
 
 		for i in range(1, 16):
 			self.device.set_key(i, DEF_KEY, passwd, passwd)
@@ -318,7 +326,7 @@ class SDEngine:
 		try:
 			card_type, serial = self.device.select()
 
-			passwd = md5(passwd, 6)
+			passwd = md5(bytec(passwd), 6)
 
 			b10 = STRUCT_BLOCK.unpack(self.device.read_block(1, passwd, 0))
 
@@ -330,7 +338,7 @@ class SDEngine:
 
 			sec = 2 # sector
 			block = 0
-			key = ""
+			key = b""
 
 			for i in range(0, klen, 16):
 				if block == 2:
@@ -339,7 +347,9 @@ class SDEngine:
 				else:
 					block += 1
 
-				key += self.device.read_block(sec, passwd, block)
+				dat = self.device.read_block(sec, passwd, block)
+
+				key += dat
 
 			klen = b10[1]
 			key = key[:klen]
@@ -347,8 +357,9 @@ class SDEngine:
 
 		except KeyboardInterrupt:
 			raise KeyboardInterrupt()
-		except Exception as e:
-			msg = e.message
+		finally: pass
+		#except Exception as e:
+		#	msg = str(e)
 
 		return {
 			"suc": suc,
@@ -360,12 +371,12 @@ class SDEngine:
 	def applyAdminCard(self, ctp, key):
 		if ctp == 1:
 			# pub key
-			pkcs = "-----BEGIN RSA PUBLIC KEY-----\n" + base64.b64encode(key) + "\n-----END RSA PUBLIC KEY-----"
+			pkcs = bytec("-----BEGIN RSA PUBLIC KEY-----\n") + base64.b64encode(key) + bytec("\n-----END RSA PUBLIC KEY-----")
 			self.enc.loadPubKey(pkcs)
 			return "public"
 		elif ctp == 2:
 			# priv key
-			pkcs = "-----BEGIN RSA PRIVATE KEY-----\n" + base64.b64encode(key) + "\n-----END RSA PRIVATE KEY-----"
+			pkcs = bytec("-----BEGIN RSA PRIVATE KEY-----\n") + base64.b64encode(key) + bytec("\n-----END RSA PRIVATE KEY-----")
 			self.enc.loadPrivKey(pkcs)
 			return "private"
 		else:
@@ -374,12 +385,12 @@ class SDEngine:
 	def wipeAdmin(self, passwd):
 		card_type, serial = self.device.select()
 
-		passwd = md5(passwd, 6)
+		passwd = md5(bytec(passwd), 6)
 
 		for i in range(1, 16):
-			self.device.write_block(i, passwd, 0, "\x00" * 16)
-			self.device.write_block(i, passwd, 1, "\x00" * 16)
-			self.device.write_block(i, passwd, 2, "\x00" * 16)
+			self.device.write_block(i, passwd, 0, b"\x00" * 16)
+			self.device.write_block(i, passwd, 1, b"\x00" * 16)
+			self.device.write_block(i, passwd, 2, b"\x00" * 16)
 			self.device.set_key(i, passwd, DEF_KEY, DEF_KEY)
 
 def errmsg(msg, code = 1):
@@ -442,7 +453,6 @@ if __name__ == "__main__":
 		eng.mute()
 
 	if argv.admin:
-		# eng.initAdminCard(2, "MIICYAIBAAKBgQCTCKuIZuVzMaZebKIC7eVacqElXFEDiPe8Xjt3KnF2wocutJJLImYx0dUwiZeSAJAp/fL3z49LNkQ1N/vpNml9B7pVeiYow+Lv8V2RV06CD9N6M5mJ4qNYg4uqLRU41RajQcGs9Pu4J/SnMxoacRlhB1Komp56HjoaVPlxzTN/tQIDAQABAoGAPjjPDlwtAYCjXRYvwXmXM52K4Fqe1hYicI6YL6fAeHd96Z/0wOL/yFl6FJ5FjD28xGh5Z7FofHWsi7DzHtwf1Wn8h2Fr3u8I1YZ8xqTP/NAXxQ958eFMKcG8jeASbOizIbrnOxbhw4PQ5hZLmjf1yUUSE/v/45FQPf3l6/MjngECRQCjh2T895yixUxPewxajoGxsYK943nkLMv2lYlP94Q+mhJBVmXtfdvaDHre3Jxfkvl/ANCsO4uJplNdq+qYU5BCH5HOdQI9AOYtcLdhDiNc7a15oGjTArIE2AocNX+8GIT6raLvH58/RhfbXaeIvsaRU3KeuiKRQ8BJpYq4DuzaKBtEQQJEOWeoHd1WURVtimEpnwhzossrmDkoat8G4pLv1vCOreMsEV+g/FO4P70tzNoo0qwnhVvl5PAqNbH7heB5w+thsrSeXJkCPFHHCyjbvp4pwffEIo2binWc6vSMmSVMuplkRpSAyIdXf5uyQE/pcX4y26b5ZcAqRBvpDnt+cS8NQvqNAQJFAIk2IW7j7MHdzRVmhj2KvO+14v744GpHaRTMHC2Tw8fIuvJKpcCWeW44sSctslljFpWIJ8VY/eDu4wfYrKMRWrHeoW97", "116879")
 		print("waiting for admin card")
 		eng.waitCard()
 
@@ -451,6 +461,8 @@ if __name__ == "__main__":
 
 		if not ret["suc"]:
 			errmsg("failed to load admin card: " + ret["msg"])
+
+		# print(base64.b64encode(ret["key"]))
 
 		ctp = eng.applyAdminCard(ret["type"], ret["key"])
 		print("a %s key is loaded" % ctp)
@@ -471,6 +483,8 @@ if __name__ == "__main__":
 			repeat = getpass.getpass("repeat: ")
 			if passwd != repeat:
 				errmsg("different passwords")
+
+			# print(key)
 
 			eng.initAdminCard(1, key, passwd)
 			print("success")
@@ -499,7 +513,7 @@ if __name__ == "__main__":
 	elif argv.wipe_admin:
 		print("waiting for admin card")
 		eng.waitCard()
-		if raw_input("Are you sure to wipe out the admin card? [N/y]: ").lower() == "y":
+		if input("Are you sure to wipe out the admin card? [N/y]: ").lower() == "y":
 			passwd = getpass.getpass("password: ")
 			eng.wipeAdmin(passwd)
 			print("success")
@@ -508,7 +522,7 @@ if __name__ == "__main__":
 	if argv.wipe:
 		print("waiting for card")
 		eng.waitCard()
-		if raw_input("Are you sure to wipe out the card? [N/y]: ").lower() == "y":
+		if input("Are you sure to wipe out the card? [N/y]: ").lower() == "y":
 			eng.wipeout()
 			print("success")
 		exit(0)

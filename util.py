@@ -3,7 +3,7 @@ import time
 import hashlib
 
 def to_hex(cmd):
-	return " ".join([ hex(ord(c))[2:].zfill(2) for c in cmd ])
+	return " ".join([ hex(c)[2:].zfill(2) for c in cmd ])
 
 def to_hex_mat(cmd, maxr = 6, indent = "   "):
 	"""Return the hexadecimal version of a serial command.
@@ -13,7 +13,7 @@ def to_hex_mat(cmd, maxr = 6, indent = "   "):
 
 	"""
 
-	bt = [ hex(ord(c))[2:].zfill(2) for c in cmd ]
+	bt = [ hex(c)[2:].zfill(2) for c in cmd ]
 	cont = [ indent + " ".join(bt[i:i + maxr]) for i in range(0, len(bt), maxr) ]
 
 	return "\n".join(cont)
@@ -25,3 +25,9 @@ def md5(str, maxb = 16):
 
 def timestamp():
 	return int(time.mktime(datetime.datetime.now().timetuple()))
+
+def bytec(str):
+	return str.encode("latin1")
+
+def byte(num):
+	return chr(num).encode("latin1")

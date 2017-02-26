@@ -94,7 +94,7 @@ class YHY523U:
 		body = b""
 
 		for b in body_raw:
-			body += bytes(chr(b), encoding = "utf-8")
+			body += byte(b)
 			if b == 0xAA:
 				body += b"\x00"
 
@@ -103,7 +103,7 @@ class YHY523U:
 
 		return HEADER + struct.pack("<H", length) + body + struct.pack("B", checksum)
 
-	def get_n_bytes(self, n, handle_AA=False):
+	def get_n_bytes(self, n, handle_AA = False):
 		"""Read n bytes from the device.
 
 		Keyword arguments:
@@ -117,7 +117,7 @@ class YHY523U:
 			if handle_AA:
 				if received.find(b"\xAA\x00") >= 0:
 					received = received.replace(b"\xAA\x00", b"\xAA")
-				if received[0] == b"\x00" and buffer[-1] == b"\xAA":
+				if received[0] == 0x00 and buffer[-1] == 0xAA:
 					received = received[1:]
 			buffer += received
 
@@ -154,13 +154,14 @@ class YHY523U:
 
 		reserved, command = struct.unpack("<HH", packet[:4])
 		data = packet[4:-1]
-		checksum = ord(packet[-1])
+		checksum = packet[-1]
 
-		packet_int = map(ord, packet[:-1])
+		packet_int = packet[:-1]
 		checksum_calc = reduce(lambda x, y: x ^ y, packet_int)
-		if data[0] == b"\x00":
+		if data[0] == 0x00:
 			if checksum != checksum_calc:
 				raise Exception("bad checksum")
+				
 		return command, data
 
 	def send_receive(self, cmd, data):
@@ -176,7 +177,7 @@ class YHY523U:
 		if cmd_received != cmd:
 			raise Exception("the command in answer is bad!")
 		else:
-			return ord(data_received[0]), data_received[1:]
+			return data_received[0], data_received[1:]
 
 	def has_card(self):
 		status, card_type = self.send_receive(CMD_MIFARE_REQUEST, b"\x52")
@@ -218,11 +219,11 @@ class YHY523U:
 
 		"""
 
-		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + bytes(chr(sector * 4), encoding = "utf-8") + keya)
+		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + byte(sector * 4) + keya)
 		results = b""
 		
 		for block in blocks:
-			status, data = self.send_receive(CMD_MIFARE_READ_BLOCK, bytes(chr(sector * 4 + block), encoding = "utf-8"))
+			status, data = self.send_receive(CMD_MIFARE_READ_BLOCK, byte(sector * 4 + block))
 			if status != 0:
 				raise Exception("errno: %d" % status)
 			results += data
@@ -230,9 +231,9 @@ class YHY523U:
 		return results
 
 	def read_block(self, sector, keya, block):
-		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + bytes(chr(sector * 4), encoding = "utf-8") + keya)
+		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + byte(sector * 4) + keya)
 		
-		status, data = self.send_receive(CMD_MIFARE_READ_BLOCK, bytes(chr(sector * 4 + block), encoding = "utf-8"))
+		status, data = self.send_receive(CMD_MIFARE_READ_BLOCK, byte(sector * 4 + block))
 		if status != 0:
 			raise Exception("errno: %d" % status)
 
@@ -258,20 +259,20 @@ class YHY523U:
 		data -- the data string to be written
 
 		"""
-		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + bytes(chr(sector * 4), encoding = "utf-8") + keya)
+		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + byte(sector * 4) + keya)
 		
-		status, result = self.send_receive(CMD_MIFARE_WRITE_BLOCK, bytes(chr(sector * 4 + block), encoding = "utf-8") + data)
+		status, result = self.send_receive(CMD_MIFARE_WRITE_BLOCK, byte(sector * 4 + block) + data)
 		if status != 0:
 			raise Exception("errno: %d" % status)
 
 		return result
 
 	def set_key(self, sector, keya, nkeya, nkeyb):
-		self.send_receive(CMD_MIFARE_AUTH2, "\x60" + bytes(chr(sector * 4), encoding = "utf-8") + keya)
+		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + byte(sector * 4) + keya)
 
 		data = nkeya + b"\xff\x07\x80\x69" + nkeyb
 
-		status, result = self.send_receive(CMD_MIFARE_WRITE_BLOCK, bytes(chr(sector * 4 + 3), encoding = "utf-8") + data)
+		status, result = self.send_receive(CMD_MIFARE_WRITE_BLOCK, byte(sector * 4 + 3) + data)
 		if status != 0:
 			raise Exception("errno: %d" % status)
 
@@ -285,7 +286,7 @@ class YHY523U:
 
 		"""
 		self.select()
-		for sector in xrange(0, 16):
+		for sector in range(0, 16):
 			# cont = "auth failed"
 
 			try:
@@ -304,7 +305,7 @@ class YHY523U:
 
 		"""
 		self.select()
-		for sector in xrange(0, 16):
+		for sector in range(0, 16):
 			try:
 				ac = buffer(self.read_sector(sector, keya, (3,)), 6, 3)
 				print("ACs for sector %d:" % sector, to_hex(ac))
@@ -338,7 +339,7 @@ class YHY523U:
 		delay -- the beep duration in milliseconds (default: 10)
 
 		"""
-		status, data = self.send_receive(CMD_BEEP, bytes(chr(delay), encoding = "utf-8"))
+		status, data = self.send_receive(CMD_BEEP, byte(delay))
 		if status == 0:
 			return 1
 		else:
@@ -394,8 +395,8 @@ class YHY523U:
 		amount -- the initial amount of the balance (default: 1)
 
 		"""
-		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + bytes(chr(sector * 4), encoding = "utf-8") + keya)
-		status, result = self.send_receive(CMD_MIFARE_INITVAL, bytes(chr(sector * 4 + block), encoding = "utf-8") + struct.pack("I", amount))
+		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + byte(sector * 4) + keya)
+		status, result = self.send_receive(CMD_MIFARE_INITVAL, byte(sector * 4 + block) + struct.pack("I", amount))
 		if status != 0:
 			raise Exception("errno: %d" % status)
 		return result
@@ -409,8 +410,8 @@ class YHY523U:
 		block -- the block to read in the sector (default: 0)
 
 		"""
-		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + bytes(chr(sector * 4), encoding = "utf-8") + keya)
-		status, result = self.send_receive(CMD_MIFARE_READ_BALANCE, bytes(chr(sector * 4 + block), encoding = "utf-8"))
+		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + byte(sector * 4) + keya)
+		status, result = self.send_receive(CMD_MIFARE_READ_BALANCE, byte(sector * 4 + block))
 		if status != 0:
 			raise Exception("errno: %d" % status)
 		return result
@@ -425,8 +426,8 @@ class YHY523U:
 		amount -- the decrement amount (default: 1)
 
 		"""
-		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + bytes(chr(sector * 4), encoding = "utf-8") + keya)
-		status, result = self.send_receive(CMD_MIFARE_DECREMENT, bytes(chr(sector * 4 + block), encoding = "utf-8") + struct.pack("I", amount))
+		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + byte(sector * 4) + keya)
+		status, result = self.send_receive(CMD_MIFARE_DECREMENT, byte(sector * 4 + block) + struct.pack("I", amount))
 		if status != 0:
 			raise Exception("errno: %d" % status)
 		return result
@@ -441,8 +442,8 @@ class YHY523U:
 		amount -- the increment amount (default: 1)
 
 		"""
-		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + bytes(chr(sector * 4), encoding = "utf-8") + keya)
-		status, result = self.send_receive(CMD_MIFARE_INCREMENT, bytes(chr(sector * 4 + block), encoding = "utf-8") + struct.pack("I", amount))
+		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + byte(sector * 4) + keya)
+		status, result = self.send_receive(CMD_MIFARE_INCREMENT, byte(sector * 4 + block) + struct.pack("I", amount))
 		if status != 0:
 			raise Exception("errno: %d" % status)
 		return result
@@ -457,7 +458,7 @@ class YHY523U:
 		"""
 		for key in keys:
 			self.select()
-			status, data = self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + bytes(chr(sector * 4), encoding = "utf-8") + key)
+			status, data = self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + byte(sector * 4) + key)
 			if status == 0:
 				print("Key A found:", to_hex(key))
 				break
@@ -466,7 +467,7 @@ class YHY523U:
 
 		for key in keys:
 			self.select()
-			status, data = self.send_receive(CMD_MIFARE_AUTH2, b"\x61" + bytes(chr(sector * 4), encoding = "utf-8") + key)
+			status, data = self.send_receive(CMD_MIFARE_AUTH2, b"\x61" + byte(sector * 4) + key)
 			if status == 0:
 				print("Key B found:", to_hex(key))
 				break
