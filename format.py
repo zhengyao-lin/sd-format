@@ -1,10 +1,14 @@
 import struct, time
 import argparse
+import platform
 import getpass
 import base64
 import auth
 import math
 import os
+import re
+
+import serial.tools.list_ports
 
 from util import *
 from yhy523u import *
@@ -112,7 +116,7 @@ class SDEngine:
 			vers = b30[1]
 
 			if not value in ALLOW_VALUE:
-				raise Exception, "illegal value"
+				raise Exception("illegal value")
 
 			sign = (
 				self.device.read_block(ofs + 3, key, 1) +
@@ -126,12 +130,12 @@ class SDEngine:
 			)
 
 			if not self.enc.verify(sign, uid, ofs, serial, value):
-				raise Exception, "auth failed"
+				raise Exception("auth failed")
 
 			stamp = self.checkTimestamp(serial, b20[2])
 
 			if stamp == 0:
-				raise Exception, "potential fake card"
+				raise Exception("potential fake card")
 
 			# add ref
 			b20[1] += 1
@@ -142,8 +146,8 @@ class SDEngine:
 
 			suc = 1
 		except KeyboardInterrupt:
-			raise KeyboardInterrupt
-		except Exception, e:
+			raise KeyboardInterrupt()
+		except Exception as e:
 			msg = e.message
 
 		return {
@@ -198,8 +202,8 @@ class SDEngine:
 				print("success uid: %d key: %s" % (uid, to_hex(key)))
 				self.beep("suc")
 			except KeyboardInterrupt:
-				raise KeyboardInterrupt
-			except Exception, e:
+				raise KeyboardInterrupt()
+			except Exception as e:
 				print("failed: " + e.message)
 				self.beep("failed")
 
@@ -272,7 +276,7 @@ class SDEngine:
 				self.device.set_led("off")
 
 		except KeyboardInterrupt:
-			raise KeyboardInterrupt
+			raise KeyboardInterrupt()
 		except: pass
 
 	# card type(ctp): 1 for pub key, 2 for priv key
@@ -342,8 +346,8 @@ class SDEngine:
 			suc = 1
 
 		except KeyboardInterrupt:
-			raise KeyboardInterrupt
-		except Exception, e:
+			raise KeyboardInterrupt()
+		except Exception as e:
 			msg = e.message
 
 		return {
@@ -365,7 +369,7 @@ class SDEngine:
 			self.enc.loadPrivKey(pkcs)
 			return "private"
 		else:
-			raise Exception, "unrecognized admin card type " + str(ctp)
+			raise Exception("unrecognized admin card type " + str(ctp))
 
 	def wipeAdmin(self, passwd):
 		card_type, serial = self.device.select()
@@ -402,6 +406,8 @@ if __name__ == "__main__":
 	parser.add_argument("--write-priv", help = "initialize an admin card with private key", action = "store_true")
 	parser.add_argument("--wipe-admin", help = "wipe out an admin card", action = "store_true")
 
+	parser.add_argument("-p", "--port", help = "specify a port", type = str)
+
 	argv = parser.parse_args()
 
 	pub = None
@@ -413,7 +419,24 @@ if __name__ == "__main__":
 	if os.path.isfile(argv.priv):
 		priv = argv.priv
 
-	eng = SDEngine("/dev/ttyUSB0", pub, priv)
+	port = None
+
+	if argv.port:
+		port = argv.port
+	elif platform.system() == "Windows":
+		# find com
+		comlist = list(serial.tools.list_ports.comports())
+
+		for com in comlist:
+			# print(com.description)
+			if re.match(r"Silicon Labs CP210x USB to UART Bridge", com.description):
+				port = com.device
+	else:
+		port = "/dev/ttyUSB0"
+
+	print("use device at " + port)
+
+	eng = SDEngine(port, pub, priv)
 
 	if argv.mute:
 		eng.mute()

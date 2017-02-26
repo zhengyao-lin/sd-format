@@ -2,14 +2,15 @@
 
 import datetime
 import os, sys, struct, serial
+from functools import reduce
 
 from util import *
 
 # Command header
-HEADER = "\xAA\xBB"
+HEADER = b"\xAA\xBB"
 # \x00\x00 according to API reference but only works with YHY632
 # \xFF\xFF works for both.
-RESERVED = "\xFF\xFF"
+RESERVED = b"\xFF\xFF"
 
 # Serial commands
 CMD_SET_BAUDRATE = 0x0101
@@ -39,14 +40,14 @@ CMD_MIFARE_UL_SELECT = 0x0212
 
 # Default keys
 DEFAULT_KEYS = (
-	"\x00\x00\x00\x00\x00\x00",
-	"\xa0\xa1\xa2\xa3\xa4\xa5",
-	"\xb0\xb1\xb2\xb3\xb4\xb5",
-	"\x4d\x3a\x99\xc3\x51\xdd",
-	"\x1a\x98\x2c\x7e\x45\x9a",
-	"\xFF" * 6,
-	"\xd3\xf7\xd3\xf7\xd3\xf7",
-	"\xaa\xbb\xcc\xdd\xee\xff"
+	b"\x00\x00\x00\x00\x00\x00",
+	b"\xa0\xa1\xa2\xa3\xa4\xa5",
+	b"\xb0\xb1\xb2\xb3\xb4\xb5",
+	b"\x4d\x3a\x99\xc3\x51\xdd",
+	b"\x1a\x98\x2c\x7e\x45\x9a",
+	b"\xFF" * 6,
+	b"\xd3\xf7\xd3\xf7\xd3\xf7",
+	b"\xaa\xbb\xcc\xdd\xee\xff"
 )
 
 # Error codes
@@ -90,15 +91,15 @@ class YHY523U:
 		length = 2 + 2 + 1 + len(data)
 
 		body_raw = RESERVED + struct.pack("<H", cmd) + data
-		body = ""
+		body = b""
 
 		for b in body_raw:
-			body += b
-			if b == "\xAA":
-				body += "\x00"
+			body += bytes(chr(b), encoding = "utf-8")
+			if b == 0xAA:
+				body += b"\x00"
 
-		body_int = map(ord, body)
-		checksum = reduce(lambda x,y:  x^y, body_int)
+		body_int = list(body)
+		checksum = reduce(lambda x, y:  x ^ y, body_int)
 
 		return HEADER + struct.pack("<H", length) + body + struct.pack("B", checksum)
 
@@ -110,13 +111,13 @@ class YHY523U:
 		handle_AA -- True to handle \xAA byte differently, False otherwise
 
 		"""
-		buffer = ""
+		buffer = b""
 		while 1:
 			received = self.ser.read()
 			if handle_AA:
-				if received.find("\xAA\x00") >= 0:
-					received = received.replace("\xAA\x00","\xAA")
-				if received[0] == "\x00" and buffer[-1] == "\xAA":
+				if received.find(b"\xAA\x00") >= 0:
+					received = received.replace(b"\xAA\x00", b"\xAA")
+				if received[0] == b"\x00" and buffer[-1] == b"\xAA":
 					received = received[1:]
 			buffer += received
 
@@ -137,10 +138,10 @@ class YHY523U:
 
 	def receive_data(self):
 		"""Receive data from the device."""
-		buffer = ""
+		buffer = b""
 
 		# Receive junk bytes
-		prev_byte = "\x00"
+		prev_byte = b"\x00"
 		while 1:
 			cur_byte = self.ser.read(1)
 			if prev_byte + cur_byte == HEADER:
@@ -156,10 +157,10 @@ class YHY523U:
 		checksum = ord(packet[-1])
 
 		packet_int = map(ord, packet[:-1])
-		checksum_calc = reduce(lambda x,y: x^y, packet_int)
-		if data[0] == "\x00":
+		checksum_calc = reduce(lambda x, y: x ^ y, packet_int)
+		if data[0] == b"\x00":
 			if checksum != checksum_calc:
-				raise Exception, "bad checksum"
+				raise Exception("bad checksum")
 		return command, data
 
 	def send_receive(self, cmd, data):
@@ -173,12 +174,12 @@ class YHY523U:
 		self.send_command(cmd, data)
 		cmd_received, data_received = self.receive_data()
 		if cmd_received != cmd:
-			raise Exception, "the command in answer is bad!"
+			raise Exception("the command in answer is bad!")
 		else:
 			return ord(data_received[0]), data_received[1:]
 
 	def has_card(self):
-		status, card_type = self.send_receive(CMD_MIFARE_REQUEST, "\x52")
+		status, card_type = self.send_receive(CMD_MIFARE_REQUEST, b"\x52")
 		return status == 0
 
 	def select(self):
@@ -186,17 +187,17 @@ class YHY523U:
 		Return the type and the serial of a Mifare card.
 
 		"""
-		status, card_type = self.send_receive(CMD_MIFARE_REQUEST, "\x52")
+		status, card_type = self.send_receive(CMD_MIFARE_REQUEST, b"\x52")
 		if status != 0:
-			raise Exception, "no card found"
+			raise Exception("no card found")
 
-		status, serial = self.send_receive(CMD_MIFARE_ANTICOLISION, "\x04")
+		status, serial = self.send_receive(CMD_MIFARE_ANTICOLISION, b"\x04")
 		if status != 0:
-			raise Exception, "error in anticollision"
+			raise Exception("error in anticollision")
 
 		card_type = struct.unpack(">H", card_type)[0]
 		if card_type == TYPE_MIFARE_UL:
-			status, serial = self.send_receive(CMD_MIFARE_UL_SELECT, "")
+			status, serial = self.send_receive(CMD_MIFARE_UL_SELECT, b"")
 		else:
 			self.send_receive(CMD_MIFARE_SELECT, serial)
 
@@ -207,7 +208,7 @@ class YHY523U:
 		status, data = self.send_receive(CMD_MIFARE_HALT, "")
 		return status, data
 
-	def read_sector(self, sector = 0, keya = "\xff" * 6, blocks = (0, 1, 2,)):
+	def read_sector(self, sector = 0, keya = b"\xff" * 6, blocks = (0, 1, 2,)):
 		"""Read a sector of a Mifare card.
 
 		Keyword arguments:
@@ -217,23 +218,23 @@ class YHY523U:
 
 		"""
 
-		self.send_receive(CMD_MIFARE_AUTH2, "\x60" + chr(sector * 4) + keya)
-		results = ""
+		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + bytes(chr(sector * 4), encoding = "utf-8") + keya)
+		results = b""
 		
 		for block in blocks:
-			status, data = self.send_receive(CMD_MIFARE_READ_BLOCK, chr(sector * 4 + block))
+			status, data = self.send_receive(CMD_MIFARE_READ_BLOCK, bytes(chr(sector * 4 + block), encoding = "utf-8"))
 			if status != 0:
-				raise Exception, "errno: %d" % status
+				raise Exception("errno: %d" % status)
 			results += data
 
 		return results
 
 	def read_block(self, sector, keya, block):
-		self.send_receive(CMD_MIFARE_AUTH2, "\x60" + chr(sector * 4) + keya)
+		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + bytes(chr(sector * 4), encoding = "utf-8") + keya)
 		
-		status, data = self.send_receive(CMD_MIFARE_READ_BLOCK, chr(sector * 4 + block))
+		status, data = self.send_receive(CMD_MIFARE_READ_BLOCK, bytes(chr(sector * 4 + block), encoding = "utf-8"))
 		if status != 0:
-			raise Exception, "errno: %d" % status
+			raise Exception("errno: %d" % status)
 
 		return data
 
@@ -247,7 +248,7 @@ class YHY523U:
 
 		return suc
 
-	def write_block(self, sector = 0, keya = "\xff" * 6, block = 0, data = "\x00" * 16):
+	def write_block(self, sector = 0, keya = b"\xff" * 6, block = 0, data = b"\x00" * 16):
 		"""Write in a block of a Mifare card.
 
 		Keyword arguments:
@@ -257,26 +258,26 @@ class YHY523U:
 		data -- the data string to be written
 
 		"""
-		self.send_receive(CMD_MIFARE_AUTH2, "\x60" + chr(sector * 4) + keya)
+		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + bytes(chr(sector * 4), encoding = "utf-8") + keya)
 		
-		status, result = self.send_receive(CMD_MIFARE_WRITE_BLOCK, chr(sector * 4 + block) + data)
+		status, result = self.send_receive(CMD_MIFARE_WRITE_BLOCK, bytes(chr(sector * 4 + block), encoding = "utf-8") + data)
 		if status != 0:
-			raise Exception, "errno: %d" % status
+			raise Exception("errno: %d" % status)
 
 		return result
 
 	def set_key(self, sector, keya, nkeya, nkeyb):
-		self.send_receive(CMD_MIFARE_AUTH2, "\x60" + chr(sector * 4) + keya)
+		self.send_receive(CMD_MIFARE_AUTH2, "\x60" + bytes(chr(sector * 4), encoding = "utf-8") + keya)
 
-		data = nkeya + "\xff\x07\x80\x69" + nkeyb
+		data = nkeya + b"\xff\x07\x80\x69" + nkeyb
 
-		status, result = self.send_receive(CMD_MIFARE_WRITE_BLOCK, chr(sector * 4 + 3) + data)
+		status, result = self.send_receive(CMD_MIFARE_WRITE_BLOCK, bytes(chr(sector * 4 + 3), encoding = "utf-8") + data)
 		if status != 0:
-			raise Exception, "errno: %d" % status
+			raise Exception("errno: %d" % status)
 
 		return result
 
-	def dump(self, keya = "\xff" * 6):
+	def dump(self, keya = b"\xff" * 6):
 		"""Dump a Mifare card.
 
 		Keyword arguments:
@@ -292,9 +293,9 @@ class YHY523U:
 			except:
 				cont = "auth failed"
 
-			print "sector %d: %s" % (sector, cont)
+			print("sector %d: %s" % (sector, cont))
 
-	def dump_access_conditions(self, keya="\xff"*6):
+	def dump_access_conditions(self, keya = b"\xff" * 6):
 		"""Dump the access conditions (AC) of a Mifare card.
 
 		Keyword arguments:
@@ -306,9 +307,9 @@ class YHY523U:
 		for sector in xrange(0, 16):
 			try:
 				ac = buffer(self.read_sector(sector, keya, (3,)), 6, 3)
-				print "ACs for sector %d:" % sector, to_hex(ac)
+				print("ACs for sector %d:" % sector, to_hex(ac))
 			except:
-				print "Unable to read ACs for sector %d" % sector
+				print("Unable to read ACs for sector %d" % sector)
 
 	def get_fw_version(self):
 		"""Return the firmware version of the device."""
@@ -337,7 +338,7 @@ class YHY523U:
 		delay -- the beep duration in milliseconds (default: 10)
 
 		"""
-		status, data = self.send_receive(CMD_BEEP, chr(delay))
+		status, data = self.send_receive(CMD_BEEP, bytes(chr(delay), encoding = "utf-8"))
 		if status == 0:
 			return 1
 		else:
@@ -351,13 +352,13 @@ class YHY523U:
 
 		"""
 		if led == "blue":
-			data = "\x01"
+			data = b"\x01"
 		elif led == "red":
-			data = "\x02"
+			data = b"\x02"
 		elif led == "both":
-			data = "\x03"
+			data = b"\x03"
 		else:
-			data = "\x00"
+			data = b"\x00"
 
 		return self.send_receive(CMD_LED, data)[0] == 0
 
@@ -369,21 +370,21 @@ class YHY523U:
 
 		"""
 		if rate == 19200:
-			data = "\x03"
+			data = b"\x03"
 		elif rate == 28800:
-			data = "\x04"
+			data = b"\x04"
 		elif rate == 38400:
-			data = "\x05"
+			data = b"\x05"
 		elif rate == 57600:
-			data = "\x06"
+			data = b"\x06"
 		elif rate == 115200:
-			data = "\x07"
+			data = b"\x07"
 		else:
-			data = "\x01"
+			data = b"\x01"
 
 		return self.send_receive(CMD_SET_BAUDRATE, data)[0] == 0
 
-	def init_balance(self, sector = 0, keya = "\xff" * 6, block = 0, amount = 1):
+	def init_balance(self, sector = 0, keya = b"\xff" * 6, block = 0, amount = 1):
 		"""Init a balance in a Mifare card.
 
 		Keyword arguments:
@@ -393,13 +394,13 @@ class YHY523U:
 		amount -- the initial amount of the balance (default: 1)
 
 		"""
-		self.send_receive(CMD_MIFARE_AUTH2, "\x60" + chr(sector * 4) + keya)
-		status, result = self.send_receive(CMD_MIFARE_INITVAL, chr(sector * 4 + block) + struct.pack("I", amount))
+		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + bytes(chr(sector * 4), encoding = "utf-8") + keya)
+		status, result = self.send_receive(CMD_MIFARE_INITVAL, bytes(chr(sector * 4 + block), encoding = "utf-8") + struct.pack("I", amount))
 		if status != 0:
-			raise Exception, "errno: %d" % status
+			raise Exception("errno: %d" % status)
 		return result
 		
-	def read_balance(self, sector = 0, keya = "\xff" * 6, block = 0):
+	def read_balance(self, sector = 0, keya = b"\xff" * 6, block = 0):
 		"""Read a balance.
 
 		Keyword arguments:
@@ -408,13 +409,13 @@ class YHY523U:
 		block -- the block to read in the sector (default: 0)
 
 		"""
-		self.send_receive(CMD_MIFARE_AUTH2, "\x60" + chr(sector * 4) + keya)
-		status, result = self.send_receive(CMD_MIFARE_READ_BALANCE, chr(sector * 4 + block))
+		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + bytes(chr(sector * 4), encoding = "utf-8") + keya)
+		status, result = self.send_receive(CMD_MIFARE_READ_BALANCE, bytes(chr(sector * 4 + block), encoding = "utf-8"))
 		if status != 0:
-			raise Exception, "errno: %d" % status
+			raise Exception("errno: %d" % status)
 		return result
 		
-	def decrease_balance(self, sector = 0, keya = "\xff" * 6, block = 0, amount = 1):
+	def decrease_balance(self, sector = 0, keya = b"\xff" * 6, block = 0, amount = 1):
 		"""Decrease a balance of amount.
 
 		Keyword arguments:
@@ -424,13 +425,13 @@ class YHY523U:
 		amount -- the decrement amount (default: 1)
 
 		"""
-		self.send_receive(CMD_MIFARE_AUTH2, "\x60" + chr(sector * 4) + keya)
-		status, result = self.send_receive(CMD_MIFARE_DECREMENT, chr(sector * 4 + block) + struct.pack("I", amount))
+		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + bytes(chr(sector * 4), encoding = "utf-8") + keya)
+		status, result = self.send_receive(CMD_MIFARE_DECREMENT, bytes(chr(sector * 4 + block), encoding = "utf-8") + struct.pack("I", amount))
 		if status != 0:
-			raise Exception, "errno: %d" % status
+			raise Exception("errno: %d" % status)
 		return result
 		
-	def increase_balance(self, sector = 0, keya = "\xff" * 6, block = 0, amount = 1):
+	def increase_balance(self, sector = 0, keya = b"\xff" * 6, block = 0, amount = 1):
 		"""Increase a balance of amount.
 
 		Keyword arguments:
@@ -440,10 +441,10 @@ class YHY523U:
 		amount -- the increment amount (default: 1)
 
 		"""
-		self.send_receive(CMD_MIFARE_AUTH2, "\x60" + chr(sector * 4) + keya)
-		status, result = self.send_receive(CMD_MIFARE_INCREMENT, chr(sector * 4 + block) + struct.pack("I", amount))
+		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + bytes(chr(sector * 4), encoding = "utf-8") + keya)
+		status, result = self.send_receive(CMD_MIFARE_INCREMENT, bytes(chr(sector * 4 + block), encoding = "utf-8") + struct.pack("I", amount))
 		if status != 0:
-			raise Exception, "errno: %d" % status
+			raise Exception("errno: %d" % status)
 		return result
 
 	def test_keys(self, sector = 0, keys = DEFAULT_KEYS):
@@ -456,21 +457,21 @@ class YHY523U:
 		"""
 		for key in keys:
 			self.select()
-			status, data = self.send_receive(CMD_MIFARE_AUTH2, "\x60" + chr(sector * 4) + key)
+			status, data = self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + bytes(chr(sector * 4), encoding = "utf-8") + key)
 			if status == 0:
-				print "Key A found:", to_hex(key)
+				print("Key A found:", to_hex(key))
 				break
 			else:
-				print "Invalid key A:", to_hex(key)
+				print("Invalid key A:", to_hex(key))
 
 		for key in keys:
 			self.select()
-			status, data = self.send_receive(CMD_MIFARE_AUTH2, "\x61" + chr(sector * 4) + key)
+			status, data = self.send_receive(CMD_MIFARE_AUTH2, b"\x61" + bytes(chr(sector * 4), encoding = "utf-8") + key)
 			if status == 0:
-				print "Key B found:", to_hex(key)
+				print("Key B found:", to_hex(key))
 				break
 			else:
-				print "Invalid key B:", to_hex(key)
+				print("Invalid key B:", to_hex(key))
 	
 # if __name__ == "__main__":
 
@@ -538,7 +539,7 @@ if __name__ == "__main__":
 			card_type, serial = device.select()
 			last_serial = serial
 
-			print "find card:", card_type, "- serial:", to_hex(serial)
+			print("find card:", card_type, "- serial:", to_hex(serial))
 
 			device.dump()
 			# device.dump_access_conditions()
@@ -552,7 +553,7 @@ if __name__ == "__main__":
 
 			# device.test_keys(15)
 		except KeyboardInterrupt:
-			raise KeyboardInterrupt
+			raise KeyboardInterrupt()
 		# except: pass
 		finally: pass
 

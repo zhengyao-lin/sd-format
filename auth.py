@@ -46,7 +46,7 @@ class SDEnc:
 
 	def sign(self, uid, ofs, serial, value):
 		if self.priv == None:
-			raise Exception, "require a private key"
+			raise Exception("require a private key")
 
 		msg = pack(uid, ofs, serial, value)
 		enc = rsa.sign(msg, self.priv, "SHA-1")
@@ -55,7 +55,7 @@ class SDEnc:
 
 	def verify(self, sign, uid, ofs, serial, value):
 		if self.pub == None:
-			raise Exception, "require a public key"
+			raise Exception("require a public key")
 
 		msg = pack(uid, ofs, serial, value)
 		try:
