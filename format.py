@@ -19,6 +19,7 @@ class SDEngine:
 		self.device = YHY523U(port)
 		self.enc = auth.SDEnc()
 		self.muted = False
+		self.tlog = {};
 
 		if pub != None:
 			self.enc.loadPub(pub)
@@ -34,7 +35,7 @@ class SDEngine:
 
 		self.device.write_block(1, DEF_KEY, 0, STRUCT_BLOCK.pack(ofs, 0, 0, 0))
 
-		self.device.write_block(ofs + 2, DEF_KEY, 0, STRUCT_BLOCK.pack(uid, 0, 0, 0)) # uid, ref, pad, pad
+		self.device.write_block(ofs + 2, DEF_KEY, 0, STRUCT_BLOCK.pack(uid, 0, timestamp(), 0)) # uid, ref, timestamp, pad
 		self.device.write_block(ofs + 2, DEF_KEY, 1, STRUCT_BLOCK.pack(0, 0, 0, 0)) # key[4]
 
 		self.device.write_block(ofs + 3, DEF_KEY, 0, STRUCT_BLOCK.pack(value, version, 0, 0)) # value, version, pad, pad
@@ -61,6 +62,16 @@ class SDEngine:
 		# print(to_hex(key))
 		return key
 
+	def checkTimestamp(self, serial, stamp):
+		now = timestamp()
+		if (serial in self.tlog and stamp < self.tlog[serial]) \
+		   or stamp > now:
+			return 0 # fake?
+
+		self.tlog[serial] = now
+
+		return now
+
 	def verify(self):
 		suc = 0
 		value = None
@@ -68,6 +79,7 @@ class SDEngine:
 		ref = None
 		uid = None
 		msg = None
+		stamp = None
 
 		try:
 			card_type, serial = self.device.select()
@@ -103,9 +115,16 @@ class SDEngine:
 			if not self.enc.verify(sign, uid, ofs, serial, value):
 				raise Exception, "auth failed"
 
+			stamp = self.checkTimestamp(serial, b20[2])
+
+			if stamp == 0:
+				raise Exception, "potential fake card"
+
 			# add ref
 			b20[1] += 1
+			b20[2] = stamp
 			ref = b20[1]
+
 			self.device.write_block(ofs + 2, DEF_KEY, 0, STRUCT_BLOCK.pack(*b20))
 
 			suc = 1
@@ -120,6 +139,7 @@ class SDEngine:
 			"ver": vers,
 			"ref": ref,
 			"uid": uid,
+			"stamp": stamp,
 			"msg": msg
 		}
 
