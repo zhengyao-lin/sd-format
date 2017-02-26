@@ -9,6 +9,7 @@ import os
 from util import *
 from yhy523u import *
 
+DEF_SDHEAD = "star"
 DEF_KEY = "\xff" * 6
 DEF_DATASIZE = 8 # sectors
 DEF_MAXOFS = int((64 - 1) / DEF_DATASIZE)
@@ -16,6 +17,7 @@ DEF_MAXKEYBLOCK = 13
 
 ALLOW_VALUE = (1, 2, 5)
 STRUCT_BLOCK = struct.Struct("<IIII")
+STRUCT_HEAD = struct.Struct("<4sIII")
 
 class SDEngine:
 	def __init__(self, port, pub = None, priv = None):
@@ -36,7 +38,11 @@ class SDEngine:
 		assert ofs <= DEF_MAXOFS
 		ofs *= DEF_DATASIZE
 
-		self.device.write_block(1, DEF_KEY, 0, STRUCT_BLOCK.pack(ofs, 0, 0, 0))
+		# self.device.write_block(1, DEF_KEY, 0, STRUCT_BLOCK.pack(ofs, 0, 0, 0))
+		chk = STRUCT_BLOCK.unpack(self.device.read_block(1, DEF_KEY, 0))
+		assert chk[0] == 0, "not an empty card"
+
+		self.device.write_block(1, DEF_KEY, 0, STRUCT_HEAD.pack(DEF_SDHEAD, ofs, 0, 0))
 
 		self.device.write_block(ofs + 2, DEF_KEY, 0, STRUCT_BLOCK.pack(uid, 0, timestamp(), 0)) # uid, ref, timestamp, pad
 		self.device.write_block(ofs + 2, DEF_KEY, 1, STRUCT_BLOCK.pack(0, 0, 0, 0)) # key[4]
@@ -87,8 +93,12 @@ class SDEngine:
 		try:
 			card_type, serial = self.device.select()
 
+			head = STRUCT_HEAD.unpack(self.device.read_block(1, DEF_KEY, 0))
+
+			assert head[0] == DEF_SDHEAD, "not a star dollar"
+
 			# get offset
-			ofs = STRUCT_BLOCK.unpack(self.device.read_block(1, DEF_KEY, 0))[0]
+			ofs = head[1]
 			assert ofs <= DEF_MAXOFS
 			ofs *= DEF_DATASIZE
 
@@ -200,7 +210,7 @@ class SDEngine:
 	def wipeout(self):
 		card_type, serial = self.device.select()
 
-		ofs = STRUCT_BLOCK.unpack(self.device.read_block(1, DEF_KEY, 0))[0]
+		ofs = STRUCT_BLOCK.unpack(self.device.read_block(1, DEF_KEY, 0))[1]
 		assert ofs <= DEF_MAXOFS
 		ofs *= DEF_DATASIZE
 
