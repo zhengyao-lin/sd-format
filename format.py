@@ -434,16 +434,12 @@ if __name__ == "__main__":
 
 	if argv.port:
 		port = argv.port
-	elif platform.system() == "Windows":
-		# find com
+	else:
 		comlist = list(serial.tools.list_ports.comports())
 
 		for com in comlist:
-			# print(com.description)
-			if re.match(r"Silicon Labs CP210x USB to UART Bridge", com.description):
+			if re.match(r"CP210|cp210", com.description):
 				port = com.device
-	else:
-		port = "/dev/ttyUSB0"
 
 	print("use device at " + port)
 
