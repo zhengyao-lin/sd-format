@@ -93,6 +93,7 @@ class YHY523U:
 		body = b""
 
 		for b in body_raw:
+			# print(type(data))
 			body += byte(b)
 			if b == 0xAA:
 				body += b"\x00"
@@ -384,137 +385,10 @@ class YHY523U:
 
 		return self.send_receive(CMD_SET_BAUDRATE, data)[0] == 0
 
-	def init_balance(self, sector = 0, keya = b"\xff" * 6, block = 0, amount = 1):
-		"""Init a balance in a Mifare card.
-
-		Keyword arguments:
-		sector -- the sector index (default: 0)
-		keya -- the key A
-		block -- the block to write on in the sector (default: 0)
-		amount -- the initial amount of the balance (default: 1)
-
-		"""
-		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + byte(sector * 4) + keya)
-		status, result = self.send_receive(CMD_MIFARE_INITVAL, byte(sector * 4 + block) + struct.pack("I", amount))
-		if status != 0:
-			raise Exception("errno: %d" % status)
-		return result
-		
-	def read_balance(self, sector = 0, keya = b"\xff" * 6, block = 0):
-		"""Read a balance.
-
-		Keyword arguments:
-		sector -- the sector index (default: 0)
-		keya -- the key A
-		block -- the block to read in the sector (default: 0)
-
-		"""
-		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + byte(sector * 4) + keya)
-		status, result = self.send_receive(CMD_MIFARE_READ_BALANCE, byte(sector * 4 + block))
-		if status != 0:
-			raise Exception("errno: %d" % status)
-		return result
-		
-	def decrease_balance(self, sector = 0, keya = b"\xff" * 6, block = 0, amount = 1):
-		"""Decrease a balance of amount.
-
-		Keyword arguments:
-		sector -- the sector index (default: 0)
-		keya -- the key A
-		block -- the block to write on in the sector (default: 0)
-		amount -- the decrement amount (default: 1)
-
-		"""
-		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + byte(sector * 4) + keya)
-		status, result = self.send_receive(CMD_MIFARE_DECREMENT, byte(sector * 4 + block) + struct.pack("I", amount))
-		if status != 0:
-			raise Exception("errno: %d" % status)
-		return result
-		
-	def increase_balance(self, sector = 0, keya = b"\xff" * 6, block = 0, amount = 1):
-		"""Increase a balance of amount.
-
-		Keyword arguments:
-		sector -- the sector index (default: 0)
-		keya -- the key A
-		block -- the block to write on in the sector (default: 0)
-		amount -- the increment amount (default: 1)
-
-		"""
-		self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + byte(sector * 4) + keya)
-		status, result = self.send_receive(CMD_MIFARE_INCREMENT, byte(sector * 4 + block) + struct.pack("I", amount))
-		if status != 0:
-			raise Exception("errno: %d" % status)
-		return result
-
-	def test_keys(self, sector = 0, keys = DEFAULT_KEYS):
-		"""Test an array of potential keys to find the right one.
-
-		Keyword arguments:
-		sector -- the sector index (default: 0)
-		keys -- the keys to be tested (default: DEFAULT_KEYS)
-
-		"""
-		for key in keys:
-			self.select()
-			status, data = self.send_receive(CMD_MIFARE_AUTH2, b"\x60" + byte(sector * 4) + key)
-			if status == 0:
-				print("Key A found:", to_hex(key))
-				break
-			else:
-				print("Invalid key A:", to_hex(key))
-
-		for key in keys:
-			self.select()
-			status, data = self.send_receive(CMD_MIFARE_AUTH2, b"\x61" + byte(sector * 4) + key)
-			if status == 0:
-				print("Key B found:", to_hex(key))
-				break
-			else:
-				print("Invalid key B:", to_hex(key))
-	
-# if __name__ == "__main__":
-
-# Creating the device
-
-# Lighting of the blue LED
-#device.set_led("blue")
-# Beeping during 10 ms
-#device.beep(10)
-# Lighting of both LEDs
-# device.set_led("blue")
-
-# Printing the version of the firmware
-#print device.get_fw_version()
-
-# Trying to dump the card with different hex keys A
-#device.dump("\xA0\xA1\xA2\xA3\xA4\xA5")
-#device.dump("\x8f\xd0\xa4\xf2\x56\xe9")
-# Trying to dump the card with \xFF\xFF\xFF\xFF\xFF\xFF
-
-# device.dump()
-
-# Trying to dump the card ACs with \xFF\xFF\xFF\xFF\xFF\xFF
-# device.dump_access_conditions()
-
-# Printing card type and serial id
-# card_type, serial = device.select()
-# print "Card type:", card_type, "- Serial number:", to_hex(serial)
-
-# Printing the dump of the blocks 0 and 1 of the sector 0
-# with the key A \xFF\xFF\xFF\xFF\xFF\xFF
-#device.select()
-#print to_hex(device.read_sector(0,"\xff"*6, (0,1)))
-# Reading sector: 2, blocks: 0, 1
-#device.select()
-#print to_hex(device.read_sector(2, "\xA0\xA1\xA2\xA3\xA4\xA5", (0,1,)))
-
-# Looping reading cards
-
 if __name__ == "__main__":
 	import time
 
-	device = YHY523U("/dev/ttyUSB0", 115200)
+	device = YHY523U("COM6", 115200)
 	last_serial = None
 
 	device.select()
@@ -558,30 +432,3 @@ if __name__ == "__main__":
 		finally: pass
 
 		time.sleep(0.1)
-
-
-# Read-write-read-write-read
-# Reading sector: 4, blocks: 2, 3
-# device.select()
-# print to_hex(device.read_sector(4, "\xA0\xA1\xA2\xA3\xA4\xA5", (2, 3)))
-# device.write_block(4, "\xA0\xA1\xA2\xA3\xA4\xA5", 2, "\x01\x23\x45\x67"*4)
-# print to_hex(device.read_sector(4, "\xA0\xA1\xA2\xA3\xA4\xA5", (2, 3)))
-# device.write_block(4, "\xA0\xA1\xA2\xA3\xA4\xA5", 2, "\x00"*16)
-# print to_hex(device.read_sector(4, "\xA0\xA1\xA2\xA3\xA4\xA5", (2, 3)))
-
-# Read-write-read-write-read-write-read
-# Playing with a balance on sector: 7, block: 1
-#device.select()
-#print "Balance:", struct.unpack("4b", device.read_balance(7, "\xff"*6, 1))
-#device.init_balance(7, "\xff"*6, 1, 42)
-#print "Balance:", struct.unpack("4b", device.read_balance(7, "\xff"*6, 1))
-#device.decrease_balance(7, "\xff"*6, 1, 3)
-#print "Balance:", struct.unpack("4b", device.read_balance(7, "\xff"*6, 1))
-#device.increase_balance(7, "\xff"*6, 1, 2)
-#print "Balance:", struct.unpack("4b", device.read_balance(7, "\xff"*6, 1))
-
-# Testing a set of default keys
-# device.test_keys()
-
-# Other tests
-#print device.send_receive(CMD_WORKING_STATUS, "\x01\x23")
