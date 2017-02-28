@@ -1,0 +1,27 @@
+#main-stage {
+	position: absolute;
+
+	left: 0;
+	top: 0;
+
+	height: 100%;
+	width: 100%;
+
+	background: #EBEBEB;
+}
+
+.main-vcenter {
+	position: relative;
+}
+
+.main-loader {
+	position: relative;
+
+	left: 0;
+	width: 100%;
+
+	font-size: 4em;
+	text-align: center;
+
+	color: #EBEBEB;
+}

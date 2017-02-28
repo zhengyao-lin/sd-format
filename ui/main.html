@@ -5,10 +5,52 @@
 		<meta http-equiv="Pragma" content="no-cache">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 	
+		<link rel="stylesheet" href="/ui/font/fontawesome/import.css">
+		<link rel="stylesheet" href="/ui/css/main.css">
+
 		<script src="/ui/js/jquery.js"></script>
 	</head>
 
 	<body>
-		<span style="font-family: Ubuntu;">Hello</span>
+		<div id="main-stage">
+			<div id="main-loader" class="main-loader main-vcenter">
+				<span class="fa fa-cog fa-spin"></span>
+			</div>
+		</div>
+
+		<script>
+			Array.prototype.choose = function () {
+				return this[Math.floor(Math.random() * this.length)];
+			};
+
+			(function ($) {
+				var color_box = [ "#1ABC9C", "#2ECC71", "#3498DB", "#9B59B6", "#E67E22", "#E74C3C" ];
+
+				function _setVCenter(pr, e) {
+					e.css("top", ((pr.height() - e.height()) / 2) + "px");
+					return;
+				}
+
+				function _updatePos() {
+					var e = $(".main-vcenter");
+					var i;
+
+					for (i = 0; i < e.length; i++) {
+						_setVCenter($(e[i]).parent(), $(e[i]));
+					}
+
+					return;
+				}
+
+				window.onload = function () {
+					_updatePos();
+					// $("#main-loader").css("color", color_box.choose());
+				};
+
+				window.onresize = _updatePos;
+
+				$("#main-stage").css("background", color_box.choose());
+			})(jQuery)
+		</script>
 	</body>
 </html>

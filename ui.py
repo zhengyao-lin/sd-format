@@ -11,18 +11,11 @@ DEF_CONT_TYPE_MAP = {
 	"html": "text/html"
 }
 
-port = format.SDEngine.searchCOM()
-
-if port == None:
-	raise Exception("unable to find device")
-
-print("found device at " + port)
-
-eng = format.SDEngine(port)
+eng = None
 
 def INT_hascard(self, query):
 	self.setHeader(status = 400)
-	self.response(json.dumps({ "suc": True, "data": eng.hasCard() }))
+	self.response(json.dumps({ "suc": eng.hasCard() }))
 
 def INT_check(self, query):
 	res = eng.verify()
@@ -36,8 +29,30 @@ def INT_wcheck(self, query):
 	self.setHeader(status = 400)
 	self.response(json.dumps(res))
 
+def INT_init(self, query):
+	global eng
+
+	if eng != None:
+		self.setHeader(status = 400)
+		self.response(json.dumps({ "suc": True }))
+		return
+
+	port = format.SDEngine.searchCOM()
+
+	if port == None:
+		self.setHeader(status = 400)
+		self.response(json.dumps({ "suc": False, "msg": "no device found" }))
+		return
+
+	print("found device at " + port)
+	eng = format.SDEngine(port)
+
+	self.setHeader(status = 400)
+	self.response(json.dumps({ "suc": True }))
+
 DEF_INT_MAP = {
 	"hascard": INT_hascard,
+	"init": INT_init,
 	"check": INT_check,
 	"wcheck": INT_wcheck
 }
@@ -62,14 +77,16 @@ class UIHandler(BaseHTTPRequestHandler):
 		self.end_headers()
 
 	def response(self, cont):
-		self.wfile.write(cont.encode("utf-8"))
+		if type(cont) != bytes:
+			cont = cont.encode("latin1")
+		self.wfile.write(cont)
 
 	def routeStatic(self, pref):
 		# print(self.parse)
 		path = self.parse["path"]
 
 		if path.find(pref) == 0:
-			with open(path[1:]) as fp:
+			with open(path[1:], "rb") as fp:
 				suf = path.split(".")[-1]
 
 				if suf in DEF_CONT_TYPE_MAP:
