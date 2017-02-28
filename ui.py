@@ -1,4 +1,6 @@
+import format
 import urllib
+import json
 
 from util import *
 from http.server import *
@@ -7,6 +9,37 @@ DEF_CONT_TYPE_MAP = {
 	"js": "application/x-javascript",
 	"css": "text/css",
 	"html": "text/html"
+}
+
+port = format.SDEngine.searchCOM()
+
+if port == None:
+	raise Exception("unable to find device")
+
+print("found device at " + port)
+
+eng = format.SDEngine(port)
+
+def INT_hascard(self, query):
+	self.setHeader(status = 400)
+	self.response(json.dumps({ "suc": True, "data": eng.hasCard() }))
+
+def INT_check(self, query):
+	res = eng.verify()
+	self.setHeader(status = 400)
+	self.response(json.dumps(res))
+
+# wait and check
+def INT_wcheck(self, query):
+	eng.waitCard()
+	res = eng.verify()
+	self.setHeader(status = 400)
+	self.response(json.dumps(res))
+
+DEF_INT_MAP = {
+	"hascard": INT_hascard,
+	"check": INT_check,
+	"wcheck": INT_wcheck
 }
 
 class UIHandler(BaseHTTPRequestHandler):
@@ -50,7 +83,7 @@ class UIHandler(BaseHTTPRequestHandler):
 
 	def do_GET(self):
 		try:
-			print(self.parseQuery())
+			self.parseQuery()
 
 			if self.routeStatic("/ui/"): return
 
@@ -63,8 +96,16 @@ class UIHandler(BaseHTTPRequestHandler):
 				with open("ui/main.html") as fp:
 					self.response(fp.read())
 			else:
-				self.setHeader(status = 404)
-				self.response("page missing")
+				cmd = self.parse["path"][1:].split("/")
+				print(cmd)
+
+				if cmd[0] == "int" and \
+				   len(cmd) > 1 and \
+				   cmd[1] in DEF_INT_MAP:
+					DEF_INT_MAP[cmd[1]](self, self.parse["query"])
+				else:
+					self.setHeader(status = 404)
+					self.response("page missing " + self.parse["path"])
 		# except:
 		#	self.setHeader(status = 500)
 		#	self.response("something wrong inside")

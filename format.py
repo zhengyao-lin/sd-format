@@ -393,6 +393,19 @@ class SDEngine:
 			self.device.write_block(i, passwd, 2, b"\x00" * 16)
 			self.device.set_key(i, passwd, DEF_KEY, DEF_KEY)
 
+	@staticmethod
+	def searchCOM():
+		comlist = list(serial.tools.list_ports.comports())
+		port = None
+
+		for com in comlist:
+			# print(com.description)
+			if com.description.find("cp210") != -1 or \
+			   com.description.find("CP210") != -1:
+				port = com.device
+
+		return port
+
 def errmsg(msg, code = 1):
 	print("error: " + msg)
 	exit(code)
@@ -435,13 +448,7 @@ if __name__ == "__main__":
 	if argv.port:
 		port = argv.port
 	else:
-		comlist = list(serial.tools.list_ports.comports())
-
-		for com in comlist:
-			# print(com.description)
-			if com.description.find("cp210") != -1 or \
-			   com.description.find("CP210") != -1:
-				port = com.device
+		port = SDEngine.searchCOM()
 
 	if not port:
 		errmsg("cannot find any device, please specify one com")
