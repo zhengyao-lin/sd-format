@@ -44,19 +44,38 @@ def INT_init(self, query):
 
 	self.sendJSON({ "suc": True })
 
+# read admin card
+def INT_radmin(self, query):
+	if not "pw" in query:
+		self.sendJSON({ "suc": False, "msg": "wrong argument" })
+		return
+
+	pw = query["pw"]
+	res = eng.readAdminCard(pw)
+
+	if not res["suc"]:
+		self.sendJSON({ "suc": False, "msg": res["msg"] })
+		return;
+
+	ctp = eng.applyAdminCard(res["type"], res["key"])
+
+	self.sendJSON({ "suc": True, "type": ctp })
+
 DEF_INT_MAP = {
 	"hascard": INT_hascard,
 	"init": INT_init,
 	"check": INT_check,
-	"wcheck": INT_wcheck
+	"wcheck": INT_wcheck,
+	"radmin": INT_radmin
 }
 
 class UIHandler(BaseHTTPRequestHandler):
 	def parseQuery(self):
 		res = urllib.parse.urlparse(self.path)
+		
 		self.parse = {
 			"path": res.path,
-			"query": res.query
+			"query": dict(urllib.parse.parse_qsl(res.query))
 		}
 
 		return self.parse
@@ -80,7 +99,7 @@ class UIHandler(BaseHTTPRequestHandler):
 		self.response(json.dumps(dat))
 
 	def routeStatic(self, pref):
-		# print(self.parse)
+		print(self.parse)
 		path = self.parse["path"]
 
 		if path.find(pref) == 0:

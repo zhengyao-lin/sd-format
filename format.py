@@ -357,9 +357,9 @@ class SDEngine:
 
 		except KeyboardInterrupt:
 			raise KeyboardInterrupt()
-		finally: pass
-		#except Exception as e:
-		#	msg = str(e)
+		# finally: pass
+		except Exception as e:
+			msg = str(e)
 
 		return {
 			"suc": suc,

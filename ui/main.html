@@ -7,6 +7,7 @@
 	
 		<link rel="stylesheet" href="/ui/font/fontawesome/import.css">
 		<link rel="stylesheet" href="/ui/font/ubuntu/import.css">
+		<link rel="stylesheet" href="/ui/font/alegreya/import.css">
 		<link rel="stylesheet" href="/ui/css/main.css">
 
 		<script src="/ui/js/jquery.js"></script>
@@ -14,6 +15,24 @@
 
 	<body>
 		<div id="main-stage">
+			<div id="main-auth-layer">
+				<div class="main-auth-board main-vcenter">
+					<div class="main-auth-title">Authorize</div>
+					<div id="main-auth-slide-1" class="main-auth-slide">
+						<div class="main-auth-slide-cont main-vcenter">
+							<span class="fa fa-inbox" style="font-size: 8em;"></span><br>
+							<div id="main-auth-prompt">Put the public card<br>on the reader</div>
+						</div>
+					</div>
+					<div id="main-auth-slide-2" class="main-auth-slide">
+						<div class="main-auth-slide-cont main-vcenter" style="margin-top: 2em;">
+							<input id="main-auth-passwd" class="main-auth-textbox" type="password"><br>
+							<div id="main-auth-submit-passwd" class="main-auth-button main-auth-button-green">THAT'S IT</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
 			<div id="main-loader-layer">
 				<div id="main-loader" class="main-loader main-vcenter">
 					<span id="main-loader-icon" class="fa fa-cog fa-spin" style="font-size: 4em;"></span><br>
@@ -46,12 +65,25 @@
 					return;
 				}
 
+				var cur_slide = 1;
+
+				function _slideAuthTo(n) {
+					var e, i = 1;
+
+					while ((e = $("#main-auth-slide-" + i)).length) {
+						e.css("left", 100 * (i - n) + "%");
+						i++;
+					}
+
+					return;
+				}
+
 				function _poll(url, suc_cb, interv, method) {
 					var handler = setInterval(function () {
 						$.ajax({
 							url: url,
 							method: method || "GET",
-							dataType: "JSON",
+							dataType: "json",
 							success: function (dat) {
 								if (suc_cb(dat)) {
 									clearInterval(handler)
@@ -63,21 +95,50 @@
 					return;
 				}
 
+				function _hideLoader() {
+					$("#main-loader-icon").removeClass("fa-cog");
+					$("#main-loader-icon").removeClass("fa-spin");
+					$("#main-loader-icon").addClass("fa-check");
+
+					$("#main-loader-title").html("found device");
+
+					setTimeout(function () {
+						$("#main-loader-layer").css("top", "-100%");
+					}, 1000);
+
+					_slideAuthTo(2);
+				}
+
+				function _checkPasswd() {
+					var pw = $("#main-auth-passwd").val();
+
+					$.ajax({
+						url: "/int/radmin",
+						method: "GET",
+						dataType: "json",
+						data: { pw: pw },
+						success: function (dat) {
+							if (dat.suc) {
+								alert("password true");
+							} else {
+								alert(dat.msg);
+							}
+						}
+					});
+
+					return;
+				}
+
 				window.onload = function () {
 					_updatePos();
 
+					// _hideLoader();
+
+					$("#main-auth-submit-passwd").click(_checkPasswd);
+
 					_poll("/int/init", function (dat) {
 						if (dat.suc) {
-							$("#main-loader-icon").removeClass("fa-cog");
-							$("#main-loader-icon").removeClass("fa-spin");
-							$("#main-loader-icon").addClass("fa-check");
-
-							$("#main-loader-title").html("found device");
-
-							setTimeout(function () {
-								$("#main-loader-layer").css("top", "-100%");
-							}, 1000);
-
+							_hideLoader();
 							return true;
 						}
 
