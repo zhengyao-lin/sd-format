@@ -1,0 +1,35 @@
+@font-face {
+	font-family: "Alegreya";
+	src: url("alegreyasanssc-regular-webfont.eot");
+	src: url("alegreyasanssc-regular-webfont.eot?#iefix") format("embedded-opentype"),
+		 url("alegreyasanssc-regular-webfont.woff2") format("woff2"),
+		 url("alegreyasanssc-regular-webfont.woff") format("woff"),
+		 url("alegreyasanssc-regular-webfont.ttf") format("truetype"),
+		 url("alegreyasanssc-regular-webfont.svg#alegreya_sans_scregular") format("svg");
+	font-weight: normal;
+	font-style: normal;
+}
+
+@font-face {
+	font-family: "Alegreya";
+	src: url("alegreyasanssc-extrabold-webfont.eot");
+	src: url("alegreyasanssc-extrabold-webfont.eot?#iefix") format("embedded-opentype"),
+		 url("alegreyasanssc-extrabold-webfont.woff2") format("woff2"),
+		 url("alegreyasanssc-extrabold-webfont.woff") format("woff"),
+		 url("alegreyasanssc-extrabold-webfont.ttf") format("truetype"),
+		 url("alegreyasanssc-extrabold-webfont.svg#alegreya_sans_scextrabold") format("svg");
+	font-weight: 700;
+	font-style: normal;
+}
+
+@font-face {
+	font-family: "Alegreya";
+	src: url("alegreyasanssc-bold-webfont.eot");
+	src: url("alegreyasanssc-bold-webfont.eot?#iefix") format("embedded-opentype"),
+		 url("alegreyasanssc-bold-webfont.woff2") format("woff2"),
+		 url("alegreyasanssc-bold-webfont.woff") format("woff"),
+		 url("alegreyasanssc-bold-webfont.ttf") format("truetype"),
+		 url("alegreyasanssc-bold-webfont.svg#alegreya_sans_scbold") format("svg");
+	font-weight: 900;
+	font-style: normal;
+}

@@ -14,41 +14,35 @@ DEF_CONT_TYPE_MAP = {
 eng = None
 
 def INT_hascard(self, query):
-	self.setHeader(status = 400)
-	self.response(json.dumps({ "suc": eng.hasCard() }))
+	self.sendJSON({ "suc": eng.hasCard() })
 
 def INT_check(self, query):
 	res = eng.verify()
-	self.setHeader(status = 400)
-	self.response(json.dumps(res))
+	self.sendJSON(res)
 
 # wait and check
 def INT_wcheck(self, query):
 	eng.waitCard()
 	res = eng.verify()
-	self.setHeader(status = 400)
-	self.response(json.dumps(res))
+	self.sendJSON(res)
 
 def INT_init(self, query):
 	global eng
 
 	if eng != None:
-		self.setHeader(status = 400)
-		self.response(json.dumps({ "suc": True }))
+		self.sendJSON({ "suc": True })
 		return
 
 	port = format.SDEngine.searchCOM()
 
 	if port == None:
-		self.setHeader(status = 400)
-		self.response(json.dumps({ "suc": False, "msg": "no device found" }))
+		self.sendJSON({ "suc": False, "msg": "no device found" })
 		return
 
 	print("found device at " + port)
 	eng = format.SDEngine(port)
 
-	self.setHeader(status = 400)
-	self.response(json.dumps({ "suc": True }))
+	self.sendJSON({ "suc": True })
 
 DEF_INT_MAP = {
 	"hascard": INT_hascard,
@@ -80,6 +74,10 @@ class UIHandler(BaseHTTPRequestHandler):
 		if type(cont) != bytes:
 			cont = cont.encode("latin1")
 		self.wfile.write(cont)
+
+	def sendJSON(self, dat):
+		self.setHeader({ "Content-Type": "application/json" })
+		self.response(json.dumps(dat))
 
 	def routeStatic(self, pref):
 		# print(self.parse)

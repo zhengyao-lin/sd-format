@@ -10,6 +10,18 @@
 	background: #EBEBEB;
 }
 
+#main-loader-layer {
+	position: absolute;
+
+	left: 0;
+	top: 0;
+
+	height: 100%;
+	width: 100%;
+
+	transition: top 1s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
 .main-vcenter {
 	position: relative;
 }
@@ -20,8 +32,16 @@
 	left: 0;
 	width: 100%;
 
-	font-size: 4em;
 	text-align: center;
 
 	color: #EBEBEB;
+}
+
+#main-loader-title {
+	display: block;
+
+	margin-top: 0.5em;
+
+	font-family: Ubuntu;
+	font-size: 2em;
 }

@@ -6,6 +6,7 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 	
 		<link rel="stylesheet" href="/ui/font/fontawesome/import.css">
+		<link rel="stylesheet" href="/ui/font/ubuntu/import.css">
 		<link rel="stylesheet" href="/ui/css/main.css">
 
 		<script src="/ui/js/jquery.js"></script>
@@ -13,8 +14,11 @@
 
 	<body>
 		<div id="main-stage">
-			<div id="main-loader" class="main-loader main-vcenter">
-				<span class="fa fa-cog fa-spin"></span>
+			<div id="main-loader-layer">
+				<div id="main-loader" class="main-loader main-vcenter">
+					<span id="main-loader-icon" class="fa fa-cog fa-spin" style="font-size: 4em;"></span><br>
+					<span id="main-loader-title">Please connect the reader to the computer</span>
+				</div>
 			</div>
 		</div>
 
@@ -42,14 +46,50 @@
 					return;
 				}
 
+				function _poll(url, suc_cb, interv, method) {
+					var handler = setInterval(function () {
+						$.ajax({
+							url: url,
+							method: method || "GET",
+							dataType: "JSON",
+							success: function (dat) {
+								if (suc_cb(dat)) {
+									clearInterval(handler)
+								}
+							}
+						});
+					}, interv || 1000);
+
+					return;
+				}
+
 				window.onload = function () {
 					_updatePos();
+
+					_poll("/int/init", function (dat) {
+						if (dat.suc) {
+							$("#main-loader-icon").removeClass("fa-cog");
+							$("#main-loader-icon").removeClass("fa-spin");
+							$("#main-loader-icon").addClass("fa-check");
+
+							$("#main-loader-title").html("found device");
+
+							setTimeout(function () {
+								$("#main-loader-layer").css("top", "-100%");
+							}, 1000);
+
+							return true;
+						}
+
+						return false;
+					});
+
 					// $("#main-loader").css("color", color_box.choose());
 				};
 
 				window.onresize = _updatePos;
 
-				$("#main-stage").css("background", color_box.choose());
+				$("#main-loader-layer").css("background", color_box.choose());
 			})(jQuery)
 		</script>
 	</body>
