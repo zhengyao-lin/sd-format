@@ -40,9 +40,15 @@
 				</div>
 			</div>
 
+			<div id="main-check-layer">
+				<div id="main-check-cont" class="main-vcenter">
+					<span id="main-check-prompt" class="main-check-prompt">Hello</span>
+				</div>
+			</div>
+
 			<div id="main-control">
 				<div id="main-control-icon-set" class="main-vcenter">
-					<span class="fa fa-rocket main-control-icon"></span>
+					<span id="main-control-icon-launch" class="fa fa-rocket main-control-icon"></span>
 					<span id="main-control-icon-admin" class="fa fa-lock main-control-icon"></span>
 				</div>
 				<div id="main-control-info" class="main-vcenter"></div>
@@ -265,7 +271,44 @@
 
 				function _initControl() {
 					$("#main-control-icon-admin").click(_authAdmin);
+					$("#main-control-icon-launch").click(function () {
+						_setCheckPrompt("Yeah!");
+					});
 					 _updateControlInfo();
+				}
+
+				function _setCheckPrompt(msg, cb) {
+					var e = $("#main-check-prompt");
+					var timeout = 500;
+					var i = 0;
+
+					var t1 = timeout / 2 / e.html().length;
+					var t2 = timeout / 2 / msg.length;
+
+					var reduce = function () {
+						setTimeout(function () {
+							if (e.html()) {
+								e.html(e.html().slice(0, -1))
+								reduce();
+							} else {
+								add();
+							}
+						}, t1);
+					};
+
+					var add = function () {
+						setTimeout(function () {
+							if (i < msg.length) {
+								e.html(msg.substring(0, i + 1));
+								i++;
+								add();
+							} else {
+								if (cb) cb();
+							}
+						}, t2);
+					};
+
+					reduce();
 				}
 
 				window.onload = function () {
