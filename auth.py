@@ -65,6 +65,12 @@ class SDEnc:
 
 		return True
 
+	def hasPub(self):
+		return self.pub != None
+
+	def hasPriv(self):
+		return self.priv != None
+
 	@staticmethod
 	def genKey(pub = "sdenc.pub", priv = "sdenc.priv"):
 		(pubk, privk) = rsa.newkeys(1024)

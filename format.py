@@ -25,6 +25,7 @@ STRUCT_HEAD = struct.Struct("<4sIII")
 
 class SDEngine:
 	def __init__(self, port, pub = None, priv = None):
+		self.port = port
 		self.device = YHY523U(port)
 		self.enc = auth.SDEnc()
 		self.muted = False
@@ -405,6 +406,14 @@ class SDEngine:
 				port = com.device
 
 		return port
+
+	def getInfo(self):
+		return {
+			"port": self.port,
+			"priv": self.enc.hasPriv(),
+			"pub": self.enc.hasPub(),
+			"cached": len(self.tlog)
+		}
 
 def errmsg(msg, code = 1):
 	print("error: " + msg)

@@ -34,6 +34,8 @@
 
 	border-radius: 3px;
 
+	margin-top: -3em;
+
 	background: #F5F5F5;
 	box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
 
@@ -82,12 +84,75 @@
 	transition: left 1s cubic-bezier(0.19, 1, 0.22, 1);
 }
 
-#main-auth-prompt {
+.main-auth-prompt {
 	font-size: 1.2em;
 	font-family: Ubuntu;
 }
 
-.main-auth-textbox {
+#main-auth-resicon {
+	font-size: 4em;
+}
+
+#main-auth-resmsg {
+	margin-top: 1em;
+
+	font-size: 1.2em;
+	font-family: Ubuntu;
+
+	color: #424242;
+}
+
+#main-control {
+	position: absolute;
+
+	height: 3.5em;
+	width: 100%;
+
+	bottom: 0;
+	left: 0;
+
+	background: #313131;
+
+	box-shadow: 0 -1px 1px rgba(0, 0, 0, 0.3)
+}
+
+#main-control-icon-set {
+	position: absolute;
+
+	top: 0;
+	left: 0.5em;
+}
+
+.main-control-icon {
+	margin-left: 0.7em;
+
+	font-size: 1.5em;
+	color: #CCCCCC;
+
+	cursor: pointer;
+
+	transition: color 0.3s, box-shadow 0.3s;
+}
+
+.main-control-icon:hover {
+	color: #FFFFFF;
+	text-shadow: 0 0 1px rgba(255, 255, 255, 0.3);
+}
+
+#main-control-info {
+	position: absolute;
+
+	right: 1em;
+
+	font-family: Ubuntu;
+	font-size: 1.2em;
+
+	color: #CCCCCC;
+
+	cursor: default;
+}
+
+.main-textbox {
 	width: 60%;
 
 	border: none;
@@ -102,11 +167,11 @@
 	transition: box-shadow 0.5s;
 }
 
-.main-auth-textbox:focus {
-	box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.3) inset;
+.main-textbox:focus {
+	box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.2) inset;
 }
 
-.main-auth-button {
+.main-button {
 	display: inline-block;
 
 	margin: 1em 0;
@@ -127,14 +192,14 @@
 	transition: box-shadow 0.5s;
 }
 
-.main-auth-button-green {
+.main-button-green {
 	color: #F5F5F5;
 	background: #2ECC71;
 
 	transition: background 0.5s;
 }
 
-.main-auth-button-green:hover {
+.main-button-green:hover {
 	background: #33E67F;
 }
 

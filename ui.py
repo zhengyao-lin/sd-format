@@ -55,18 +55,22 @@ def INT_radmin(self, query):
 
 	if not res["suc"]:
 		self.sendJSON({ "suc": False, "msg": res["msg"] })
-		return;
+		return
 
 	ctp = eng.applyAdminCard(res["type"], res["key"])
 
 	self.sendJSON({ "suc": True, "type": ctp })
+
+def INT_info(self, query):
+	self.sendJSON({ "suc": True, "info": eng.getInfo() })
 
 DEF_INT_MAP = {
 	"hascard": INT_hascard,
 	"init": INT_init,
 	"check": INT_check,
 	"wcheck": INT_wcheck,
-	"radmin": INT_radmin
+	"radmin": INT_radmin,
+	"info": INT_info
 }
 
 class UIHandler(BaseHTTPRequestHandler):

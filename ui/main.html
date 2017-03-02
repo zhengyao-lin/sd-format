@@ -15,28 +15,43 @@
 
 	<body>
 		<div id="main-stage">
-			<div id="main-auth-layer">
+			<div id="main-auth-layer" style="top: -100%;">
 				<div class="main-auth-board main-vcenter">
 					<div class="main-auth-title">Authorize</div>
 					<div id="main-auth-slide-1" class="main-auth-slide">
 						<div class="main-auth-slide-cont main-vcenter">
 							<span class="fa fa-inbox" style="font-size: 8em;"></span><br>
-							<div id="main-auth-prompt">Put the public card<br>on the reader</div>
+							<div class="main-auth-prompt">Put the admin card<br>on the reader</div>
 						</div>
 					</div>
 					<div id="main-auth-slide-2" class="main-auth-slide">
-						<div class="main-auth-slide-cont main-vcenter" style="margin-top: 2em;">
-							<input id="main-auth-passwd" class="main-auth-textbox" type="password"><br>
-							<div id="main-auth-submit-passwd" class="main-auth-button main-auth-button-green">THAT'S IT</div>
+						<div class="main-auth-slide-cont main-vcenter" style="margin-top: 1em;">
+							<span class="main-auth-prompt">Password</span><br>
+							<input id="main-auth-passwd" class="main-textbox" type="password" style="margin-top: 0.8em;"><br>
+							<div id="main-auth-submit-passwd" class="main-button main-button-green">THAT'S IT</div>
+						</div>
+					</div>
+					<div id="main-auth-slide-3" class="main-auth-slide">
+						<div class="main-auth-slide-cont main-vcenter">
+							<div id="main-auth-resicon" class="fa"></div><br>
+							<div id="main-auth-resmsg"></div>
 						</div>
 					</div>
 				</div>
 			</div>
 
+			<div id="main-control">
+				<div id="main-control-icon-set" class="main-vcenter">
+					<span class="fa fa-rocket main-control-icon"></span>
+					<span id="main-control-icon-admin" class="fa fa-lock main-control-icon"></span>
+				</div>
+				<div id="main-control-info" class="main-vcenter"></div>
+			</div>
+
 			<div id="main-loader-layer">
 				<div id="main-loader" class="main-loader main-vcenter">
 					<span id="main-loader-icon" class="fa fa-cog fa-spin" style="font-size: 4em;"></span><br>
-					<span id="main-loader-title">Please connect the reader to the computer</span>
+					<span id="main-loader-title">Waiting</span>
 				</div>
 			</div>
 		</div>
@@ -85,8 +100,9 @@
 							method: method || "GET",
 							dataType: "json",
 							success: function (dat) {
-								if (suc_cb(dat)) {
+								if (handler && suc_cb(dat)) {
 									clearInterval(handler)
+									handler = null;
 								}
 							}
 						});
@@ -105,12 +121,34 @@
 					setTimeout(function () {
 						$("#main-loader-layer").css("top", "-100%");
 					}, 1000);
-
-					_slideAuthTo(2);
 				}
 
-				function _checkPasswd() {
+				function _setAuthResult(icon, color, msg) {
+					$("#main-auth-resicon").removeClass();
+
+					$("#main-auth-resicon").addClass("fa");
+					$("#main-auth-resicon").addClass("fa-" + icon);
+
+					$("#main-auth-resicon").css("color", color);
+
+					$("#main-auth-resmsg").html(msg);
+
+					_updatePos();
+
+					_slideAuthTo(3);
+
+					return;
+				}
+
+				function _checkAdminPasswd() {
 					var pw = $("#main-auth-passwd").val();
+
+					var fail = function (msg) {
+						_setAuthResult("warning", "#E67E22", "auth failed" + (msg ? ": " + msg : "" ));
+						setTimeout(function () {
+							_slideAuthTo(2);
+						}, 2000);
+					};
 
 					$.ajax({
 						url: "/int/radmin",
@@ -119,26 +157,127 @@
 						data: { pw: pw },
 						success: function (dat) {
 							if (dat.suc) {
-								alert("password true");
+								// alert("password true");
+								_setAuthResult("check-circle", "#2ECC71", dat.type + " key added");
+								 _updateControlInfo();
+								setTimeout(function () {
+									_hideAuthAdmin();
+								}, 2000);
 							} else {
-								alert(dat.msg);
+								fail(dat.msg);
 							}
+						},
+
+						error: function () {
+							fail("server down");
 						}
 					});
 
 					return;
 				}
 
+				function _keymap(map) {
+					return function (e) {
+						var c = e.keyCode;
+						var prevdef = function () {
+							e.preventDefault && e.preventDefault();
+							e.returnValue = false;
+						};
+
+						var speck =
+							(e.ctrlKey ? 4 : 0) | /* 0b100 */
+							(e.altKey ? 2 : 0) | /* 0b10 */
+							(e.shiftKey ? 1 : 0); /* 0b1 */
+
+						var c = (speck << 8) | c;
+
+						proc = map[c.toString()]
+
+						if (proc) {
+							proc(prevdef);
+						}
+
+						return;
+					};
+				}
+
+				function _setInfo(info) {
+					$("#main-control-info").html(info);
+					_updatePos();
+				}
+
+				function _authAdmin() {
+					$("#main-auth-layer").css("top", "0");
+					_slideAuthTo(1);
+
+					$("#main-auth-passwd").val("");
+
+					$("#main-auth-submit-passwd").click(_checkAdminPasswd);
+					$("#main-auth-passwd").keyup(_keymap({
+						"13": function (prevdef) {
+							prevdef();
+							_checkAdminPasswd();
+						}
+					}));
+
+					setTimeout(function () {
+						_poll("/int/hascard", function (dat) {
+							if (dat.suc) {
+								_slideAuthTo(2);
+								setTimeout(function () {
+									$("#main-auth-passwd").focus();
+								}, 1000);
+								return true;
+							}
+
+							return false;
+						}, 200);
+					}, 1000);
+				}
+
+				function _hideAuthAdmin() {
+					$("#main-auth-layer").css("top", "-100%");
+					setTimeout(function () {
+						_slideAuthTo(1);
+					}, 1000);
+				}
+
+				function _updateControlInfo() {
+					_setInfo("fetching");
+
+					$.ajax({
+						url: "/int/info",
+						method: "GET",
+						dataType: "json",
+						success: function (dat) {
+							if (dat.suc) {
+								_setInfo("port: " + dat.info.port + (dat.info.priv ? ", priv" : "") + (dat.info.pub ? ", pub" : ""));
+							} else {
+								_setInfo("failed to get info");
+							}
+						},
+
+						error: function () {
+							_setInfo("failed to get info");
+						}
+					});
+				}
+
+				function _initControl() {
+					$("#main-control-icon-admin").click(_authAdmin);
+					 _updateControlInfo();
+				}
+
 				window.onload = function () {
 					_updatePos();
 
 					// _hideLoader();
-
-					$("#main-auth-submit-passwd").click(_checkPasswd);
+					// _authAdmin();
 
 					_poll("/int/init", function (dat) {
 						if (dat.suc) {
 							_hideLoader();
+							_initControl();
 							return true;
 						}
 
