@@ -17,6 +17,7 @@
 		<div id="main-stage">
 			<div id="main-verify-layer">
 				<div id="main-verify-cont" class="main-vcenter">
+					<span id="main-verify-icon"></span><br>
 					<span id="main-verify-prompt" class="main-verify-prompt"></span>
 				</div>
 			</div>
@@ -150,7 +151,7 @@
 					var pw = $("#main-auth-passwd").val();
 
 					var fail = function (msg) {
-						_setAuthResult("warning", "#E67E22", "auth failed" + (msg ? ": " + msg : "" ));
+						_setAuthResult("warning", color_box[4], "auth failed" + (msg ? ": " + msg : "" ));
 						setTimeout(function () {
 							_slideAuthTo(2);
 						}, 2000);
@@ -164,10 +165,11 @@
 						success: function (dat) {
 							if (dat.suc) {
 								// alert("password true");
-								_setAuthResult("check-circle", "#2ECC71", dat.type + " key added");
+								_setAuthResult("check-circle", color_box[1], dat.type + " key added");
 								 _updateControlInfo();
 								setTimeout(function () {
 									_hideAuthAdmin();
+									_showVerify();
 								}, 2000);
 							} else {
 								fail(dat.msg);
@@ -232,6 +234,14 @@
 					}, 200);
 				}
 
+				function _hideVerify() {
+					$("#main-verify-layer").css("opacity", "0");
+				}
+
+				function _showVerify() {
+					$("#main-verify-layer").css("opacity", "1");
+				}
+
 				function _authAdmin() {
 					$("#main-auth-layer").css("top", "0");
 					_slideAuthTo(1);
@@ -246,15 +256,19 @@
 						}
 					}));
 
+					_hideVerify();
+
+					var back = _getWaitCB();
+					verify_lock = true;
+
 					setTimeout(function () {
-						var back = _getWaitCB();
 						_setWaitCB(function (dat) {
 							if (dat.suc) {
 								_slideAuthTo(2);
 								setTimeout(function () {
 									$("#main-auth-passwd").focus();
 								}, 1000);
-								
+
 								_setWaitCB(back);
 							}
 
@@ -268,6 +282,15 @@
 					setTimeout(function () {
 						_slideAuthTo(1);
 					}, 1000);
+
+					_poll("/int/hascard", function (dat) {
+						if (!dat.suc) {
+							verify_lock = false;
+							return true;
+						}
+
+						return false;
+					}, 200);
 				}
 
 				function _updateControlInfo() {
@@ -299,9 +322,16 @@
 					 _updateControlInfo();
 				}
 
+				function _setVerifyIcon(icon, color) {
+					$("#main-verify-icon").css("color", color);
+					$("#main-verify-icon").removeClass();
+					$("#main-verify-icon").addClass("fa");
+					$("#main-verify-icon").addClass("fa-" + icon);
+				}
+
 				function _setVerifyPrompt(msg, cb) {
 					var e = $("#main-verify-prompt");
-					var timeout = 500;
+					var timeout = 200;
 					var i = 0;
 
 					var t1 = timeout / 2 / e.html().length;
@@ -335,7 +365,7 @@
 
 				var verify_lock = false;
 				var prompts = {
-					putcard: "put your card on the reader",
+					putcard: "put the card on the reader",
 					servdown: "server down",
 					notdollar: "not a star dollar",
 					failedinfo: "failed to get info"
@@ -348,18 +378,21 @@
 						url: "/int/verify",
 						method: "GET",
 						dataType: "json",
-						data: { beep: true },
+						data: { beep: false },
 
 						success: function (dat) {
 							if (dat.suc) {
+								_setVerifyIcon("check-circle", color_box[1]);
 								_setVerifyPrompt(dat.val + " dollar" + (dat.val == 1 ? "" : "s"));
 							} else {
-								_setVerifyPrompt(prompts.notdollar);
+								_setVerifyIcon("warning", color_box[4]);
+								_setVerifyPrompt(prompts.notdollar + (dat.msg ? ": " + dat.msg : ""));
 							}
 
 							_poll("/int/hascard", function (dat) {
 								if (!dat.suc) {
 									setTimeout(function () {
+										_setVerifyIcon("inbox", "#424242");
 										_setVerifyPrompt(prompts.putcard, function () {
 											verify_lock = false;
 										});
@@ -372,12 +405,14 @@
 						},
 
 						error: function () {
+							_setVerifyIcon("warning", color_box[4]);
 							_setVerifyPrompt(prompts.servdown);
 						}
 					});
 				}
 
 				function _initVerifier() {
+					_setVerifyIcon("inbox", "#424242");
 					_setVerifyPrompt(prompts.putcard);
 					_setWaitCB(function (dat) {
 						if (dat.suc && !verify_lock) {

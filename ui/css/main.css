@@ -32,6 +32,10 @@ body {
 	text-align: center;
 }
 
+#main-verify-layer {
+	transition: opacity 0.5s;
+}
+
 .main-auth-board {
 	display: inline-block;
 
@@ -157,6 +161,10 @@ body {
 #main-verify-cont {
 	margin-top: -3.5em;
 	text-align: center;
+}
+
+#main-verify-icon {
+	font-size: 5em;
 }
 
 .main-verify-prompt {
