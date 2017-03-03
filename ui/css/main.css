@@ -16,7 +16,7 @@ body {
 
 #main-loader-layer,
 #main-auth-layer,
-#main-check-layer {
+#main-verify-layer {
 	position: absolute;
 
 	left: 0;
@@ -154,12 +154,12 @@ body {
 	cursor: default;
 }
 
-#main-check-cont {
-	margin-top: -3em;
+#main-verify-cont {
+	margin-top: -3.5em;
 	text-align: center;
 }
 
-.main-check-prompt {
+.main-verify-prompt {
 	font-size: 2.5em;
 	color: #424242;
 }

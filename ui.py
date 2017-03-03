@@ -16,14 +16,15 @@ eng = None
 def INT_hascard(self, query):
 	self.sendJSON({ "suc": eng.hasCard() })
 
-def INT_check(self, query):
+def INT_verify(self, query):
 	res = eng.verify()
-	self.sendJSON(res)
 
-# wait and check
-def INT_wcheck(self, query):
-	eng.waitCard()
-	res = eng.verify()
+	if query["beep"]:
+		if res["suc"]:
+			eng.beep("suc")
+		else:
+			eng.beep("failed")
+
 	self.sendJSON(res)
 
 def INT_init(self, query):
@@ -67,8 +68,7 @@ def INT_info(self, query):
 DEF_INT_MAP = {
 	"hascard": INT_hascard,
 	"init": INT_init,
-	"check": INT_check,
-	"wcheck": INT_wcheck,
+	"verify": INT_verify,
 	"radmin": INT_radmin,
 	"info": INT_info
 }

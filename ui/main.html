@@ -15,6 +15,12 @@
 
 	<body>
 		<div id="main-stage">
+			<div id="main-verify-layer">
+				<div id="main-verify-cont" class="main-vcenter">
+					<span id="main-verify-prompt" class="main-verify-prompt"></span>
+				</div>
+			</div>
+
 			<div id="main-auth-layer" style="top: -100%;">
 				<div class="main-auth-board main-vcenter">
 					<div class="main-auth-title">Authorize</div>
@@ -37,12 +43,6 @@
 							<div id="main-auth-resmsg"></div>
 						</div>
 					</div>
-				</div>
-			</div>
-
-			<div id="main-check-layer">
-				<div id="main-check-cont" class="main-vcenter">
-					<span id="main-check-prompt" class="main-check-prompt">Hello</span>
 				</div>
 			</div>
 
@@ -175,7 +175,7 @@
 						},
 
 						error: function () {
-							fail("server down");
+							fail(prompts.servdown);
 						}
 					});
 
@@ -212,6 +212,26 @@
 					_updatePos();
 				}
 
+				var hascard_cb = null;
+
+				function _setWaitCB(cb) {
+					hascard_cb = cb;
+				}
+
+				function _getWaitCB() {
+					return hascard_cb;
+				}
+
+				function _waitCard() {
+					_poll("/int/hascard", function (dat) {
+						if (hascard_cb) {
+							return hascard_cb(dat);
+						}
+
+						return false;
+					}, 200);
+				}
+
 				function _authAdmin() {
 					$("#main-auth-layer").css("top", "0");
 					_slideAuthTo(1);
@@ -227,17 +247,19 @@
 					}));
 
 					setTimeout(function () {
-						_poll("/int/hascard", function (dat) {
+						var back = _getWaitCB();
+						_setWaitCB(function (dat) {
 							if (dat.suc) {
 								_slideAuthTo(2);
 								setTimeout(function () {
 									$("#main-auth-passwd").focus();
 								}, 1000);
-								return true;
+								
+								_setWaitCB(back);
 							}
 
-							return false;
-						}, 200);
+							return false; // not stop waiting
+						});
 					}, 1000);
 				}
 
@@ -257,14 +279,14 @@
 						dataType: "json",
 						success: function (dat) {
 							if (dat.suc) {
-								_setInfo("port: " + dat.info.port + (dat.info.priv ? ", priv" : "") + (dat.info.pub ? ", pub" : ""));
+								_setInfo("port " + dat.info.port + (dat.info.priv ? ", priv" : "") + (dat.info.pub ? ", pub" : ""));
 							} else {
-								_setInfo("failed to get info");
+								_setInfo(prompts.failedinfo);
 							}
 						},
 
 						error: function () {
-							_setInfo("failed to get info");
+							_setInfo(prompts.failedinfo);
 						}
 					});
 				}
@@ -272,13 +294,13 @@
 				function _initControl() {
 					$("#main-control-icon-admin").click(_authAdmin);
 					$("#main-control-icon-launch").click(function () {
-						_setCheckPrompt("Yeah!");
+						_setVerifyPrompt("Yeah!");
 					});
 					 _updateControlInfo();
 				}
 
-				function _setCheckPrompt(msg, cb) {
-					var e = $("#main-check-prompt");
+				function _setVerifyPrompt(msg, cb) {
+					var e = $("#main-verify-prompt");
 					var timeout = 500;
 					var i = 0;
 
@@ -311,6 +333,59 @@
 					reduce();
 				}
 
+				var verify_lock = false;
+				var prompts = {
+					putcard: "put your card on the reader",
+					servdown: "server down",
+					notdollar: "not a star dollar",
+					failedinfo: "failed to get info"
+				};
+
+				function _verifyCard() {
+					verify_lock = true;
+
+					$.ajax({
+						url: "/int/verify",
+						method: "GET",
+						dataType: "json",
+						data: { beep: true },
+
+						success: function (dat) {
+							if (dat.suc) {
+								_setVerifyPrompt(dat.val + " dollar" + (dat.val == 1 ? "" : "s"));
+							} else {
+								_setVerifyPrompt(prompts.notdollar);
+							}
+
+							_poll("/int/hascard", function (dat) {
+								if (!dat.suc) {
+									setTimeout(function () {
+										_setVerifyPrompt(prompts.putcard, function () {
+											verify_lock = false;
+										});
+									}, 1000);
+									return true;
+								}
+
+								return false;
+							}, 200);
+						},
+
+						error: function () {
+							_setVerifyPrompt(prompts.servdown);
+						}
+					});
+				}
+
+				function _initVerifier() {
+					_setVerifyPrompt(prompts.putcard);
+					_setWaitCB(function (dat) {
+						if (dat.suc && !verify_lock) {
+							_verifyCard();
+						}
+					});
+				}
+
 				window.onload = function () {
 					_updatePos();
 
@@ -321,6 +396,8 @@
 						if (dat.suc) {
 							_hideLoader();
 							_initControl();
+							_initVerifier();
+							_waitCard();
 							return true;
 						}
 
