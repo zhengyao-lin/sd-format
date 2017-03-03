@@ -3,4 +3,4 @@
 from distutils.core import setup
 import py2exe
 
-setup(console = [ "format.py" ])
+setup(console = [ "format.py", "ui.py" ])
