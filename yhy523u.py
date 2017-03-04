@@ -74,10 +74,10 @@ TYPE_MIFARE_PRO = 0x0800
 class YHY523U:
 	"""Driver for Ehuoyan"s YHY523U module"""
 
-	def __init__(self, port = "/dev/ttyUSB0", baudrate = 115200):
+	def __init__(self, port = "/dev/ttyUSB0", baudrate = 115200, timeout = 3):
 		self.port = port
 		self.baudrate = baudrate
-		self.ser = serial.Serial(self.port, baudrate = self.baudrate)
+		self.ser = serial.Serial(self.port, baudrate = self.baudrate, timeout = timeout)
 
 	def build_command(self, cmd, data):
 		"""Build a serial command.
@@ -112,14 +112,22 @@ class YHY523U:
 
 		"""
 		buffer = b""
+		# print(n)
 		while 1:
 			received = self.ser.read()
+
+			if len(received) == 0:
+				raise Exception("read timeout")
+
 			if handle_AA:
 				if received.find(b"\xAA\x00") >= 0:
 					received = received.replace(b"\xAA\x00", b"\xAA")
 				if received[0] == 0x00 and buffer[-1] == 0xAA:
 					received = received[1:]
 			buffer += received
+
+			# print(buffer)
+			# print("y " + str(len(buffer)))
 
 			if len(buffer) >= n:
 				return buffer
@@ -388,7 +396,7 @@ class YHY523U:
 if __name__ == "__main__":
 	import time
 
-	device = YHY523U("COM6", 115200)
+	device = YHY523U("/dev/ttyUSB0", 115200)
 	last_serial = None
 
 	device.select()

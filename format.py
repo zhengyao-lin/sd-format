@@ -4,7 +4,9 @@ import struct, time
 import argparse
 import getpass
 import base64
+import urllib.request
 import auth
+import json
 import math
 import os
 
@@ -24,12 +26,13 @@ STRUCT_BLOCK = struct.Struct("<IIII")
 STRUCT_HEAD = struct.Struct("<4sIII")
 
 class SDEngine:
-	def __init__(self, port, pub = None, priv = None):
+	def __init__(self, port, pub = None, priv = None, server = "localhost:3136"):
 		self.port = port
 		self.device = YHY523U(port)
 		self.enc = auth.SDEnc()
 		self.muted = False
-		self.tlog = {};
+		self.tlog = {}
+		self.serv = server
 
 		if pub != None:
 			self.enc.loadPub(pub)
@@ -86,6 +89,25 @@ class SDEngine:
 
 	def setTimeStamp(self, serial, stamp):
 		self.tlog[serial] = stamp
+
+	def serverCheck(self, serial, key):
+		query = urllib.parse.urlencode({ "uid": base64.b64encode(serial), "key": base64.b64encode(key) })
+		req = urllib.request.urlopen("http://" + self.serv + "/check?" + query)
+		res = json.loads(strc(req.read()))
+
+		# print(res)
+
+		if res["suc"]:
+			return bytec(res["new"])
+
+		return None
+
+	def serverUpdate(self, serial):
+		query = urllib.parse.urlencode({ "uid": base64.b64encode(serial) })
+		req = urllib.request.urlopen("http://" + self.serv + "/update?" + query)
+		res = json.loads(strc(req.read()))
+
+		return res["suc"]
 
 	def verify(self):
 		suc = 0
@@ -146,6 +168,19 @@ class SDEngine:
 
 			self.device.write_block(ofs + 2, DEF_KEY, 0, STRUCT_BLOCK.pack(*b20))
 			self.setTimeStamp(serial, stamp)
+
+			key = self.device.read_block(ofs + 2, DEF_KEY, 1)
+			res = self.serverCheck(serial, key)
+
+			if not res:
+				raise Exception("server check failed")
+
+			newkey = base64.b64decode(res)
+			# print(newkey)
+			# print(len(newkey))
+			self.device.write_block(ofs + 2, DEF_KEY, 1, newkey)
+			if not self.serverUpdate(serial): # update info
+				raise Exception("server update failed")
 
 			suc = 1
 		except KeyboardInterrupt:

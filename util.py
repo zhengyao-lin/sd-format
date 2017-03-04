@@ -29,5 +29,8 @@ def timestamp():
 def bytec(str):
 	return str.encode("latin1")
 
+def strc(bytes):
+	return str(bytes, "latin1")
+
 def byte(num):
 	return chr(num).encode("latin1")
