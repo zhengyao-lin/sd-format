@@ -10,7 +10,8 @@ from http.server import *
 DEF_CONT_TYPE_MAP = {
 	"js": "application/x-javascript",
 	"css": "text/css",
-	"html": "text/html"
+	"html": "text/html",
+	"jpg": "image/jpeg"
 }
 
 eng = None

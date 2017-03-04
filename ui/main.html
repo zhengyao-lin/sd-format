@@ -17,8 +17,10 @@
 		<div id="main-stage">
 			<div id="main-verify-layer">
 				<div id="main-verify-cont" class="main-vcenter">
-					<span id="main-verify-icon"></span><br>
-					<span id="main-verify-prompt" class="main-verify-prompt"></span>
+					<span id="main-verify-card" class="main-img" style="margin-bottom: 1em;">
+						<span id="main-verify-icon" class="main-vcenter"></span>
+					</span><br>
+					<span id="main-verify-prompt"></span>
 				</div>
 			</div>
 
@@ -322,11 +324,28 @@
 					 _updateControlInfo();
 				}
 
-				function _setVerifyIcon(icon, color) {
+				function _setVerifyCard(pic) {
+					if (pic) {
+						$("#main-verify-card").css("background-image", "url(/ui/img/" + pic + ".jpg)");
+					} else {
+						$("#main-verify-card").css("background-image", "");
+					}
+
+					return;
+				}
+
+				function _setVerifyIcon(icon, color, dollar) {
 					$("#main-verify-icon").css("color", color);
 					$("#main-verify-icon").removeClass();
+					$("#main-verify-icon").addClass("main-vcenter");
 					$("#main-verify-icon").addClass("fa");
 					$("#main-verify-icon").addClass("fa-" + icon);
+
+					if (dollar) {
+						_setVerifyCard(dollar + "f");
+					} else {
+						_setVerifyCard();
+					}
 				}
 
 				function _setVerifyPrompt(msg, cb) {
@@ -382,7 +401,7 @@
 
 						success: function (dat) {
 							if (dat.suc) {
-								_setVerifyIcon("check-circle", color_box[1]);
+								_setVerifyIcon("check-circle", color_box[1], dat.val);
 								_setVerifyPrompt(dat.val + " dollar" + (dat.val == 1 ? "" : "s"));
 							} else {
 								_setVerifyIcon("warning", color_box[4]);
@@ -392,7 +411,7 @@
 							_poll("/int/hascard", function (dat) {
 								if (!dat.suc) {
 									setTimeout(function () {
-										_setVerifyIcon("inbox", "#424242");
+										_setVerifyIcon("question-circle", "#424242");
 										_setVerifyPrompt(prompts.putcard, function () {
 											verify_lock = false;
 										});
@@ -412,7 +431,7 @@
 				}
 
 				function _initVerifier() {
-					_setVerifyIcon("inbox", "#424242");
+					_setVerifyIcon("question-circle", "#424242");
 					_setVerifyPrompt(prompts.putcard);
 					_setWaitCB(function (dat) {
 						if (dat.suc && !verify_lock) {

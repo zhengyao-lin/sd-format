@@ -82,9 +82,10 @@ class SDEngine:
 		   or stamp > now:
 			return 0 # fake?
 
-		self.tlog[serial] = now
-
 		return now
+
+	def setTimeStamp(self, serial, stamp):
+		self.tlog[serial] = stamp
 
 	def verify(self):
 		suc = 0
@@ -144,6 +145,7 @@ class SDEngine:
 			ref = b20[1]
 
 			self.device.write_block(ofs + 2, DEF_KEY, 0, STRUCT_BLOCK.pack(*b20))
+			self.setTimeStamp(serial, stamp)
 
 			suc = 1
 		except KeyboardInterrupt:
