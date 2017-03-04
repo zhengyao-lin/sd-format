@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 import os, sys
 import webbrowser
 import platform
