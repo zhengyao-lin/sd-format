@@ -74,7 +74,7 @@ var int = {
 				{ uid: query.uid }, { $set: { pending: newkey } }, { returnOriginal: false, upsert: true },
 				errwrap(res, function (ret) {
 					if (!ret.value.key || ret.value.key == query.key) {
-						console.log(query.key);
+						console.log(query.uid + ": " + query.key);
 						res.qjson({ suc: true, new: newkey });
 					} else {
 						res.qerr(err.auth_failed);
@@ -85,16 +85,17 @@ var int = {
 	},
 
 	// args:
-	//     1. card uid
+	//     1. card uid(base64 encoded)
+	//     2. card key(base64 encoded)
 	update: function (req, res, args, query) {
-		if (!query.uid) {
+		if (!(query.uid && query.key)) {
 			res.qerr(err.wrong_arg);
 			return;
 		}
 	
 		db.collection("card", errwrap(res, function (col) {
 			col.findOne(
-				{ uid: query.uid },
+				{ uid: query.uid, key: query.key },
 				errwrap(res, function (ret) {
 					if (!ret || !ret.pending) {
 						res.qerr(err.no_uid);

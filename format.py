@@ -102,8 +102,8 @@ class SDEngine:
 
 		return None
 
-	def serverUpdate(self, serial):
-		query = urllib.parse.urlencode({ "uid": base64.b64encode(serial) })
+	def serverUpdate(self, serial, key):
+		query = urllib.parse.urlencode({ "uid": base64.b64encode(serial), "key": base64.b64encode(key) })
 		req = urllib.request.urlopen("http://" + self.serv + "/update?" + query)
 		res = json.loads(strc(req.read()))
 
@@ -176,7 +176,7 @@ class SDEngine:
 			if self.serv:
 				newkey = base64.b64decode(res)
 				self.device.write_block(ofs + 2, DEF_KEY, 1, newkey)
-				if not self.serverUpdate(serial): # update info
+				if not self.serverUpdate(serial, key): # update info
 					raise Exception("server update failed")
 			
 			### inc ref, set timestamp
