@@ -95,10 +95,12 @@ var int = {
 	
 		db.collection("card", errwrap(res, function (col) {
 			col.findOne(
-				{ uid: query.uid, key: query.key },
+				{ uid: query.uid },
 				errwrap(res, function (ret) {
 					if (!ret || !ret.pending) {
 						res.qerr(err.no_uid);
+					} else if (ret.key && ret.key != query.key) {
+						res.qerr(err.auth_failed);
 					} else {
 						col.findOneAndUpdate(
 							{ uid: query.uid },

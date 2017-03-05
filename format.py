@@ -484,7 +484,7 @@ if __name__ == "__main__":
 
 	parser.add_argument("-p", "--port", help = "specify a port", type = str)
 
-	parser.add_argument("-s", "--server", help = "specify a server", type = str, default = "localhost:3136")
+	parser.add_argument("-s", "--server", help = "specify a server", type = str, default = "auth.star-dollar.com")
 	parser.add_argument("--no-server", help = "don't use server", action = "store_true")
 
 	argv = parser.parse_args()
