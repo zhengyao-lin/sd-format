@@ -71,6 +71,15 @@ TYPE_MIFARE_4K = 0x0200
 TYPE_MIFARE_DESFIRE = 0x4403
 TYPE_MIFARE_PRO = 0x0800
 
+# Driver required interfaces
+# has_card
+# select
+# write_block
+# read_block
+# set_key
+# set_led
+# beep
+
 class YHY523U:
 	"""Driver for Ehuoyan"s YHY523U module"""
 
@@ -210,7 +219,7 @@ class YHY523U:
 		else:
 			self.send_receive(CMD_MIFARE_SELECT, serial)
 
-		return card_type, serial
+		return serial
 
 	def halt(self):
 		"""Halt the device."""
@@ -284,7 +293,7 @@ class YHY523U:
 		if status != 0:
 			raise Exception("errno: %d" % status)
 
-		return result
+		return
 
 	def dump(self, keya = b"\xff" * 6):
 		"""Dump a Mifare card.
@@ -340,7 +349,7 @@ class YHY523U:
 		status, data = self.send_receive(CMD_SET_NODE_NUMBER, struct.pack("<H", number))
 		return data
 
-	def beep(self, delay=10):
+	def beep(self, delay = 10):
 		"""Make the device beeping.
 
 		Keyword arguments:
@@ -415,13 +424,13 @@ if __name__ == "__main__":
 
 	while 1:
 		try:
-			while device.select()[1] == last_serial:
+			while device.select() == last_serial:
 				time.sleep(0.1)
 			
-			card_type, serial = device.select()
+			serial = device.select()
 			last_serial = serial
 
-			print("find card:", card_type, "- serial:", to_hex(serial))
+			print("find card serial:", to_hex(serial))
 
 			device.dump()
 			# device.dump_access_conditions()

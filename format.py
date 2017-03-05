@@ -1,10 +1,11 @@
 #! /usr/bin/env python3
 
+import urllib.request
 import struct, time
 import argparse
 import getpass
 import base64
-import urllib.request
+import driver
 import auth
 import json
 import math
@@ -13,7 +14,6 @@ import os
 import serial.tools.list_ports
 
 from util import *
-from yhy523u import *
 
 DEF_SDHEAD = b"star"
 DEF_KEY = b"\xff" * 6
@@ -21,6 +21,7 @@ DEF_DATASIZE = 8 # sectors
 DEF_MAXOFS = int((64 - 1) / DEF_DATASIZE)
 DEF_MAXKEYBLOCK = 13
 
+DEF_DRIVER = "yhy523u"
 DEF_AUTHSERV = "auth.star-dollar.com"
 
 ALLOW_VALUE = (1, 2, 5)
@@ -28,9 +29,9 @@ STRUCT_BLOCK = struct.Struct("<IIII")
 STRUCT_HEAD = struct.Struct("<4sIII")
 
 class SDEngine:
-	def __init__(self, port, pub = None, priv = None, server = DEF_AUTHSERV):
+	def __init__(self, port, pub = None, priv = None, server = DEF_AUTHSERV, driv = DEF_DRIVER):
 		self.port = port
-		self.device = YHY523U(port)
+		self.device = driver.init(port, driver = driv)
 		self.enc = auth.SDEnc()
 		self.muted = False
 		self.tlog = {}
@@ -43,7 +44,7 @@ class SDEngine:
 			self.enc.loadPriv(priv)
 
 	def initCard(self, uid, value, version = 1, ofs = 0):
-		card_type, serial = self.device.select()
+		serial = self.device.select()
 
 		assert ofs <= DEF_MAXOFS
 		ofs *= DEF_DATASIZE
@@ -121,7 +122,7 @@ class SDEngine:
 		stamp = None
 
 		try:
-			card_type, serial = self.device.select()
+			serial = self.device.select()
 
 			head = STRUCT_HEAD.unpack(self.device.read_block(1, DEF_KEY, 0))
 
@@ -193,8 +194,8 @@ class SDEngine:
 			suc = 1
 		except KeyboardInterrupt:
 			raise KeyboardInterrupt()
-		except Exception as e:
-			msg = str(e)
+		# except Exception as e:
+		#	msg = str(e)
 
 		return {
 			"suc": suc,
@@ -258,7 +259,7 @@ class SDEngine:
 		return key
 
 	def wipeout(self):
-		card_type, serial = self.device.select()
+		serial = self.device.select()
 
 		ofs = STRUCT_BLOCK.unpack(self.device.read_block(1, DEF_KEY, 0))[1]
 		assert ofs <= DEF_MAXOFS
@@ -327,7 +328,7 @@ class SDEngine:
 
 	# card type(ctp): 1 for pub key, 2 for priv key
 	def initAdminCard(self, ctp, b64key, passwd):
-		card_type, serial = self.device.select()
+		serial = self.device.select()
 		key = base64.b64decode(b64key)
 	
 		# print(to_hex(key))
@@ -370,7 +371,7 @@ class SDEngine:
 		suc = 0
 
 		try:
-			card_type, serial = self.device.select()
+			serial = self.device.select()
 
 			passwd = md5(bytec(passwd), 6)
 
@@ -429,7 +430,7 @@ class SDEngine:
 			raise Exception("unrecognized admin card type " + str(ctp))
 
 	def wipeAdmin(self, passwd):
-		card_type, serial = self.device.select()
+		serial = self.device.select()
 
 		passwd = md5(bytec(passwd), 6)
 
@@ -489,6 +490,8 @@ if __name__ == "__main__":
 	parser.add_argument("-s", "--server", help = "specify a server", type = str, default = DEF_AUTHSERV)
 	parser.add_argument("--no-server", help = "don't use server", action = "store_true")
 
+	parser.add_argument("--driver", help = "driver", type = str, default = DEF_DRIVER)
+
 	argv = parser.parse_args()
 
 	pub = None
@@ -518,7 +521,7 @@ if __name__ == "__main__":
 		print("server check disabled")
 		serv = None
 
-	eng = SDEngine(port, pub, priv, server = serv)
+	eng = SDEngine(port, pub, priv, server = serv, driv = argv.driver)
 
 	if argv.mute:
 		eng.mute()
