@@ -21,12 +21,14 @@ DEF_DATASIZE = 8 # sectors
 DEF_MAXOFS = int((64 - 1) / DEF_DATASIZE)
 DEF_MAXKEYBLOCK = 13
 
+DEF_AUTHSERV = "auth.star-dollar.com"
+
 ALLOW_VALUE = (1, 2, 5)
 STRUCT_BLOCK = struct.Struct("<IIII")
 STRUCT_HEAD = struct.Struct("<4sIII")
 
 class SDEngine:
-	def __init__(self, port, pub = None, priv = None, server = "localhost:3136"):
+	def __init__(self, port, pub = None, priv = None, server = DEF_AUTHSERV):
 		self.port = port
 		self.device = YHY523U(port)
 		self.enc = auth.SDEnc()
@@ -484,7 +486,7 @@ if __name__ == "__main__":
 
 	parser.add_argument("-p", "--port", help = "specify a port", type = str)
 
-	parser.add_argument("-s", "--server", help = "specify a server", type = str, default = "auth.star-dollar.com")
+	parser.add_argument("-s", "--server", help = "specify a server", type = str, default = DEF_AUTHSERV)
 	parser.add_argument("--no-server", help = "don't use server", action = "store_true")
 
 	argv = parser.parse_args()

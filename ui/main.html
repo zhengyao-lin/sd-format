@@ -405,7 +405,7 @@
 								_setVerifyPrompt(dat.val + " dollar" + (dat.val == 1 ? "" : "s"));
 							} else {
 								_setVerifyIcon("warning", color_box[4]);
-								_setVerifyPrompt(prompts.notdollar + (dat.msg ? ": " + dat.msg : ""));
+								_setVerifyPrompt(prompts.notdollar + (dat.msg && dat.msg.length ? ": " + dat.msg : ""));
 							}
 
 							_poll("/int/hascard", function (dat) {
