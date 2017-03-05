@@ -194,8 +194,8 @@ class SDEngine:
 			suc = 1
 		except KeyboardInterrupt:
 			raise KeyboardInterrupt()
-		# except Exception as e:
-		#	msg = str(e)
+		except Exception as e:
+			msg = str(e)
 
 		return {
 			"suc": suc,
