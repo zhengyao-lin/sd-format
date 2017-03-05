@@ -244,7 +244,7 @@ class SDEngine:
 		if self.hasCard():
 			try:
 				key = self.initCard(uid, value, version)
-				time.sleep(0.5)
+				# time.sleep(0.5)
 				print("success uid: %d key: %s" % (uid, to_hex(key)))
 				self.beep("suc")
 			except KeyboardInterrupt:
