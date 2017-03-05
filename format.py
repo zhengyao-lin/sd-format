@@ -123,6 +123,7 @@ class SDEngine:
 
 			head = STRUCT_HEAD.unpack(self.device.read_block(1, DEF_KEY, 0))
 
+			### basic check start
 			assert head[0] == DEF_SDHEAD, "not a star dollar"
 
 			# get offset
@@ -141,7 +142,9 @@ class SDEngine:
 
 			if not value in ALLOW_VALUE:
 				raise Exception("illegal value")
+			### basic check end
 
+			### signature check
 			sign = (
 				self.device.read_block(ofs + 3, key, 1) +
 				self.device.read_block(ofs + 3, key, 2) +
@@ -152,16 +155,31 @@ class SDEngine:
 				self.device.read_block(ofs + 5, key, 1) +
 				self.device.read_block(ofs + 5, key, 2)
 			)
-
 			if not self.enc.verify(sign, uid, ofs, serial, value):
 				raise Exception("auth failed")
 
+			### timestamp check
 			stamp = self.checkTimestamp(serial, b20[2])
-
 			if stamp == 0:
 				raise Exception("potential fake card")
 
-			# add ref
+			### server check
+			if self.serv:
+				key = self.device.read_block(ofs + 2, DEF_KEY, 1)
+				res = self.serverCheck(serial, key)
+				if not res:
+					raise Exception("server check failed")
+
+			### write back
+
+			#### update key
+			if self.serv:
+				newkey = base64.b64decode(res)
+				self.device.write_block(ofs + 2, DEF_KEY, 1, newkey)
+				if not self.serverUpdate(serial): # update info
+					raise Exception("server update failed")
+			
+			### inc ref, set timestamp
 			b20[1] += 1
 			b20[2] = stamp
 			ref = b20[1]
@@ -169,19 +187,7 @@ class SDEngine:
 			self.device.write_block(ofs + 2, DEF_KEY, 0, STRUCT_BLOCK.pack(*b20))
 			self.setTimeStamp(serial, stamp)
 
-			key = self.device.read_block(ofs + 2, DEF_KEY, 1)
-			res = self.serverCheck(serial, key)
-
-			if not res:
-				raise Exception("server check failed")
-
-			newkey = base64.b64decode(res)
-			# print(newkey)
-			# print(len(newkey))
-			self.device.write_block(ofs + 2, DEF_KEY, 1, newkey)
-			if not self.serverUpdate(serial): # update info
-				raise Exception("server update failed")
-
+			### success
 			suc = 1
 		except KeyboardInterrupt:
 			raise KeyboardInterrupt()
@@ -478,6 +484,9 @@ if __name__ == "__main__":
 
 	parser.add_argument("-p", "--port", help = "specify a port", type = str)
 
+	parser.add_argument("-s", "--server", help = "specify a server", type = str, default = "localhost:3136")
+	parser.add_argument("--no-server", help = "don't use server", action = "store_true")
+
 	argv = parser.parse_args()
 
 	pub = None
@@ -501,7 +510,13 @@ if __name__ == "__main__":
 
 	print("use device at " + port)
 
-	eng = SDEngine(port, pub, priv)
+	serv = argv.server
+
+	if argv.no_server:
+		print("server check disabled")
+		serv = None
+
+	eng = SDEngine(port, pub, priv, server = serv)
 
 	if argv.mute:
 		eng.mute()
