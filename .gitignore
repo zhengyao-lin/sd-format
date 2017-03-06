@@ -92,6 +92,7 @@ res/
 km*
 sdenc*
 sdenc*
+uids
 
 # update scripts
 upload.sh
