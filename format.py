@@ -24,7 +24,7 @@ DEF_MAXKEYBLOCK = 13
 DEF_DRIVER = "yhy523u"
 DEF_AUTHSERV = "auth.star-dollar.com"
 
-ALLOW_VALUE = (1, 2, 5)
+ALLOW_VALUE = (1, 2, 5, 10086)
 STRUCT_BLOCK = struct.Struct("<IIII")
 STRUCT_HEAD = struct.Struct("<4sIII")
 
@@ -204,7 +204,8 @@ class SDEngine:
 			"ref": ref,
 			"uid": uid,
 			"stamp": stamp,
-			"msg": msg
+			"msg": msg,
+			"ser": serial
 		}
 
 	def waitCard(self):
