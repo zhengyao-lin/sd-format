@@ -205,7 +205,7 @@ class SDEngine:
 			"uid": uid,
 			"stamp": stamp,
 			"msg": msg,
-			"ser": serial
+			"ser": list(serial)
 		}
 
 	def waitCard(self):

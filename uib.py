@@ -1,3 +1,4 @@
+import argparse
 import format
 import urllib
 import json
@@ -37,14 +38,35 @@ def INT_init(self, query):
 		self.sendJSON({ "suc": True })
 		return
 
-	port = format.SDEngine.searchCOM()
+	parser = argparse.ArgumentParser()
+
+	parser.add_argument("--driver", help = "driver", type = str, default = format.DEF_DRIVER)
+	parser.add_argument("-s", "--server", help = "specify a server", type = str, default = format.DEF_AUTHSERV)
+	parser.add_argument("--no-server", help = "don't use server", action = "store_true")
+
+	parser.add_argument("-p", "--port", help = "specify a port", type = str)
+
+	argv = parser.parse_args()
+
+	port = None
+
+	if argv.port:
+		port = argv.port
+	else:
+		port = format.SDEngine.searchCOM()
 
 	if port == None:
 		self.sendJSON({ "suc": False, "msg": "no device found" })
 		return
 
+	serv = argv.server
+
+	if argv.no_server:
+		print("server check disabled")
+		serv = None
+
 	print("found device at " + port)
-	eng = format.SDEngine(port)
+	eng = format.SDEngine(port, server = serv, driv = argv.driver)
 
 	self.sendJSON({ "suc": True })
 
