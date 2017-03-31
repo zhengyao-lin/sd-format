@@ -73,11 +73,7 @@ var int = {
 
 			if (query.info) {
 				var res = JSON.parse(query.info);
-				for (var k in res) {
-					if (res.hasOwnProperty(k)) {
-						dat[k] = res[k];
-					}
-				}
+				dat.info = res;
 			}
 
 			col.findOneAndUpdate(
