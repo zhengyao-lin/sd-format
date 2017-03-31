@@ -170,7 +170,7 @@ class SDEngine:
 			### server check
 			if self.serv:
 				oldkey = key = self.device.read_block(ofs + 2, DEF_KEY, 1)
-				res = self.serverCheck(serial, key, { "uid": uid, "stamp": stamp, "ref": ref })
+				res = self.serverCheck(serial, key, { "uid": uid, "stamp": stamp, "ref": b20[1] + 1 })
 				if not res:
 					raise Exception("server check failed")
 

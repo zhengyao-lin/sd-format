@@ -72,8 +72,7 @@ var int = {
 			var dat = { pending: newkey };
 
 			if (query.info) {
-				var res = JSON.parse(query.info);
-				dat.info = res;
+				dat.info = JSON.parse(query.info);
 			}
 
 			col.findOneAndUpdate(
