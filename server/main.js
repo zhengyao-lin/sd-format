@@ -69,9 +69,20 @@ var int = {
 
 		db.collection("card", errwrap(res, function (col) {
 			var newkey = genkey();
+			var dat = { uid: query.uid };
+
+			if (query.info) {
+				var res = JSON.parse(query.info);
+				for (var k in res) {
+					if (res.hasOwnProperty(k)) {
+						dat[k] = res[k];
+					}
+				}
+			}
 
 			col.findOneAndUpdate(
-				{ uid: query.uid }, { $set: { pending: newkey } }, { returnOriginal: false, upsert: true },
+				dat, { $set: { pending: newkey } },
+				{ returnOriginal: false, upsert: true },
 				errwrap(res, function (ret) {
 					if (!ret.value.key || ret.value.key == query.key) {
 						console.log(query.uid + ": " + query.key);

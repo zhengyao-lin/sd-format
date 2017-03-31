@@ -93,8 +93,8 @@ class SDEngine:
 	def setTimeStamp(self, serial, stamp):
 		self.tlog[serial] = stamp
 
-	def serverCheck(self, serial, key):
-		query = urllib.parse.urlencode({ "uid": base64.b64encode(serial), "key": base64.b64encode(key) })
+	def serverCheck(self, serial, key, info = {}):
+		query = urllib.parse.urlencode({ "uid": base64.b64encode(serial), "key": base64.b64encode(key), "info": json.dumps(info) })
 		req = urllib.request.urlopen("http://" + self.serv + "/check?" + query)
 		res = json.loads(strc(req.read()))
 
@@ -120,6 +120,7 @@ class SDEngine:
 		uid = None
 		msg = None
 		stamp = None
+		oldkey = None
 
 		try:
 			serial = self.device.select()
@@ -168,8 +169,8 @@ class SDEngine:
 
 			### server check
 			if self.serv:
-				key = self.device.read_block(ofs + 2, DEF_KEY, 1)
-				res = self.serverCheck(serial, key)
+				oldkey = key = self.device.read_block(ofs + 2, DEF_KEY, 1)
+				res = self.serverCheck(serial, key, { "uid": uid, "stamp": stamp, "ref": ref })
 				if not res:
 					raise Exception("server check failed")
 
@@ -204,6 +205,7 @@ class SDEngine:
 			"ref": ref,
 			"uid": uid,
 			"stamp": stamp,
+			"oldkey": oldkey,
 			"msg": msg,
 			"ser": list(serial)
 		}
