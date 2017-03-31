@@ -69,7 +69,7 @@ var int = {
 
 		db.collection("card", errwrap(res, function (col) {
 			var newkey = genkey();
-			var dat = { uid: query.uid };
+			var dat = { pending: newkey };
 
 			if (query.info) {
 				var res = JSON.parse(query.info);
@@ -77,7 +77,7 @@ var int = {
 			}
 
 			col.findOneAndUpdate(
-				dat, { $set: { pending: newkey } },
+				{ uid: query.uid }, { $set: dat },
 				{ returnOriginal: false, upsert: true },
 				errwrap(res, function (ret) {
 					if (!ret.value.key || ret.value.key == query.key) {
